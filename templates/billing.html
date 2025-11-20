@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Billing</h2>
+
+{% if is_subscribed %}
+  <p style="font-size:0.9rem;color:#16a34a;">
+    Your subscription is <strong>active</strong>.
+  </p>
+{% else %}
+  <p style="font-size:0.9rem;color:#6b7280;">
+    You’re not currently subscribed.
+  </p>
+{% endif %}
+
+{% if not stripe_configured %}
+  <p style="margin-top:0.5rem;font-size:0.85rem;color:#b91c1c;">
+    Stripe is not configured. Set <code>STRIPE_SECRET_KEY</code>, <code>STRIPE_PRICE_ID</code>,
+    and <code>STRIPE_WEBHOOK_SECRET</code> in your <code>.env</code> to enable subscriptions.
+  </p>
+{% else %}
+  <div style="margin-top:1rem;">
+    <button id="checkout-btn" class="primary" type="button">
+      Start subscription
+    </button>
+    <div id="billing-status" style="margin-top:0.75rem;font-size:0.85rem;color:#6b7280;"></div>
+  </div>
+{% endif %}
+
+<script>
+{% if stripe_configured %}
+const btn = document.getElementById("checkout-btn");
+const statusDiv = document.getElementById("billing-status");
+
+btn.addEventListener("click", async () => {
+  statusDiv.textContent = "Creating checkout session...";
+  try {
+    const res = await fetch("/create-checkout-session", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"}
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      statusDiv.textContent = "Error: " + (data.error || res.statusText);
+      return;
+    }
+
+    if (data.url) {
+      window.location = data.url;
+      return;
+    }
+
+    statusDiv.textContent =
+      "Checkout session created. ID: " + data.id +
+      ". You can redirect using data.url when available.";
+  } catch (e) {
+    statusDiv.textContent = "Failed to create checkout session.";
+  }
+});
+{% endif %}
+</script>
+
+{% endblock %}

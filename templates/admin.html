@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    table { width:100%; border-collapse: collapse; margin-top:1rem; }
+    th, td { border:1px solid #ccc; padding:.4rem .6rem; text-align:left; font-size:.95rem; }
+    th { background:#eee; }
+    .ok { color:green; font-weight:600; }
+    .bad { color:red; font-weight:600; }
+    .top { display:flex; justify-content: space-between; align-items:center; margin-bottom:1rem; }
+    .btn { padding:.4rem .8rem; border:1px solid #ccc; border-radius:8px; text-decoration:none; color:#111; }
+    form { display:inline; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Admin</h1>
+    <div>
+      <a class="btn" href="/">Home</a>
+      <form method="post" action="/logout"><button class="btn" type="submit">Logout</button></form>
+    </div>
+  </div>
+
+  <p>Logged in as: {{ username }}</p>
+  <p>Redis URL: <code>{{ info.redis_url }}</code></p>
+  <p>Redis status:
+    {% if info.redis_ok %}<span class="ok">OK</span>{% else %}<span class="bad">NOT CONNECTED</span>{% endif %}
+    {% if info.error %}<span class="bad"> ({{ info.error }})</span>{% endif %}
+  </p>
+
+  <p>Limiter keys found: <strong>{{ info.keys_found or 0 }}</strong></p>
+  <p>Total keys in DB: <strong>{{ info.dbsize or 0 }}</strong></p>
+
+  <table>
+    <thead><tr><th>Key</th><th>Preview</th></tr></thead>
+    <tbody>
+      {% for k in keys %}
+        <tr><td><code>{{ k.key }}</code></td><td><code>{{ k.val if k.val is not none else "" }}</code></td></tr>
+      {% endfor %}
+      {% if not keys %}
+        <tr><td colspan="2">No limiter keys yet. Hit /chat or /status a few times and refresh.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</body>
+</html>
+

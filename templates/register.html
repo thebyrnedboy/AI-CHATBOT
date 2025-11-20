@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Register</h2>
+<p style="font-size:0.9rem;color:#6b7280;margin-top:0;">
+  Create an account to start using the chatbot.
+</p>
+
+<form method="post" action="{{ url_for('register_post') }}">
+  <div style="display:flex;flex-direction:column;gap:0.5rem;max-width:320px;">
+    <label>
+      Email<br>
+      <input type="email" name="email" required>
+    </label>
+    <label>
+      Password<br>
+      <input type="password" name="password" required>
+    </label>
+    <button class="primary" type="submit">Register</button>
+    <p style="font-size:0.85rem;margin:0.5rem 0 0;">
+      Already have an account?
+      <a href="{{ url_for('login') }}">Log in</a>
+    </p>
+  </div>
+</form>
+
+{% endblock %}

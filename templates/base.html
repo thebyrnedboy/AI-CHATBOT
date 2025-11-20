@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>My Chatbot SaaS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f7f7f7;
+      --card: #ffffff;
+      --border: #dddddd;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+
+/* Dark mode overrides */
+    body.dark {
+      --bg: #020617;
+      --card: #020617;
+      --border: #1f2937;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --danger: #fca5a5;
+      --text: #d1d5db;
+      --muted: #9ca3af;
+    }
+
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .shell {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    button {
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #fff;
+      color: var(--text);
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    body.dark button {
+      background: #020617;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    button.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    button.danger {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: transparent;
+    }
+
+    main {
+      background: var(--card);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .flash {
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .flash.error {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .flash.success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    body.dark .flash.error {
+      background: #7f1d1d;
+      color: #fee2e2;
+    }
+
+    body.dark .flash.success {
+      background: #14532d;
+      color: #dcfce7;
+    }
+
+    .pill {
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      background: #f3f4f6;
+      color: var(--muted);
+    }
+
+    body.dark .pill {
+      background: #020617;
+    }
+
+    #theme-toggle {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+    }
+  </style>
+
+  <!-- Apply stored theme as early as possible to reduce flash -->
+  <script>
+    (function () {
+      const toggle = document.getElementById("theme-toggle");
+
+      if (!toggle) return;
+
+      function applyInitialTheme() {
+        const isDark = document.body.classList.contains("dark");
+        toggle.textContent = isDark ? "Light mode" : "Dark mode";
+      }
+
+      function toggleTheme() {
+        const isDarkNow = document.body.classList.toggle("dark");
+        try {
+          localStorage.setItem("theme", isDarkNow ? "dark" : "light");
+        } catch (e) {
+          // ignore if localStorage unavailable
+        }
+        toggle.textContent = isDarkNow ? "Light mode" : "Dark mode";
+      }
+
+      // Set initial label based on current body class
+      applyInitialTheme();
+      toggle.addEventListener("click", toggleTheme);
+    })();
+  </script>
+</body>
+</html>
+</head>
+<body>
+<script>
+  // Load theme BEFORE anything renders
+  (function () {
+    try {
+      const stored = localStorage.getItem("theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const useDark = stored === "dark" || (!stored && prefersDark);
+
+      if (useDark) {
+        document.body.classList.add("dark");
+      }
+    } catch (e) {
+      // ignore
+    }
+  })();
+</script>
+  <div class="shell">
+    <header>
+      <h1>My Chatbot SaaS</h1>
+      <div class="nav-right">
+        <!-- Theme toggle button -->
+        <button id="theme-toggle" type="button" class="pill">Dark mode</button>
+
+        {% if current_user.is_authenticated %}
+          <span class="pill">
+            {{ email if email is defined else current_user.email }}
+          </span>
+          {% if is_subscribed is defined and is_subscribed %}
+            <span class="pill" style="border-color:#16a34a;color:#15803d;">Subscribed</span>
+          {% endif %}
+          <a href="{{ url_for('billing') }}">Billing</a>
+          <form method="post" action="{{ url_for('logout') }}" style="margin:0;">
+            <button class="danger" type="submit">Logout</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('login') }}">Login</a>
+          <a href="{{ url_for('register') }}">Register</a>
+        {% endif %}
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const toggle = document.getElementById("theme-toggle");
+      if (!toggle) return;
+
+      function updateButtonText() {
+        const isDark = document.body.classList.contains("dark");
+        toggle.textContent = isDark ? "Light mode" : "Dark mode";
+      }
+
+      function toggleTheme() {
+        const isDarkNow = !document.body.classList.contains("dark");
+        document.body.classList.toggle("dark", isDarkNow);
+        localStorage.setItem("theme", isDarkNow ? "dark" : "light");
+        updateButtonText();
+      }
+
+      // Update button label based on initial theme
+      updateButtonText();
+      toggle.addEventListener("click", toggleTheme);
+    })();
+  </script>
+</body>
+</html>
+
