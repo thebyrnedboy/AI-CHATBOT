@@ -2,7 +2,6 @@
   "name": "AI-CHATBOT",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
-  // Forward Flask dev server
   "forwardPorts": [5000],
   "portsAttributes": {
     "5000": {
@@ -11,22 +10,21 @@
     }
   },
 
-  // Run after the container is created
-  "postCreateCommand": "python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt",
+  "postCreateCommand": "python -m venv .venv",
+
+  "postStartCommand": ". .venv/bin/activate && pip install -r requirements.txt",
 
   "remoteUser": "vscode",
 
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": ".venv/bin/python",
-        "python.terminal.activateEnvironment": true,
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "python.defaultInterpreterPath": "/workspaces/AI-CHATBOT/.venv/bin/python",
+        "python.terminal.activateEnvironment": true
       },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-toolsai.jupyter",
         "github.copilot"
       ]
     }
