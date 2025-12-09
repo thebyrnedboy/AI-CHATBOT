@@ -2,17 +2,164 @@
 {% block content %}
 
 <style>
-  .chat-page {
+  .page {
     display: flex;
     flex-direction: column;
+    gap: 1rem;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-row h2 {
+    margin: 0 0 0.35rem;
+  }
+
+  .header-row p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #6b7280;
+  }
+
+  .api-key-pill {
+    font-size: 0.85rem;
+    background: #eef2ff;
+    color: #312e81;
+    border: 1px solid #c7d2fe;
+    padding: 0.65rem 0.8rem;
+    border-radius: 10px;
+    min-width: 220px;
+  }
+
+  body.dark .api-key-pill {
+    background: #0f172a;
+    border-color: #1e3a8a;
+    color: #c7d2fe;
+  }
+
+  .trial-banner {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 0.9rem;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    padding: 0.55rem 0.8rem;
+    border-radius: 8px;
+  }
+
+  body.dark .trial-banner {
+    background: #451a03;
+    color: #fef3c7;
+    border-color: #f59e0b;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.75rem;
   }
 
-  .chat-header-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
+  .stat-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+  }
+
+  body.dark .stat-card {
+    background: #0b1224;
+    border-color: #1f2937;
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.3rem;
+  }
+
+  body.dark .stat-label {
+    color: #9ca3af;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem;
+  }
+
+  body.dark .card {
+    background: #0b1224;
+    border-color: #1f2937;
+  }
+
+  .card h3 {
+    margin: 0 0 0.4rem;
+  }
+
+  .card p {
+    margin: 0 0 0.65rem;
+    color: #6b7280;
+    font-size: 0.92rem;
+  }
+
+  body.dark .card p {
+    color: #9ca3af;
+  }
+
+  #upload-zone {
+    border: 2px dashed #9ca3af;
+    padding: 0.8rem;
+    text-align: center;
+    margin: 0.5rem 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+
+  body.dark #upload-zone {
+    background: #020617;
+    border-color: var(--border);
+  }
+
+  #upload-zone.dragover {
+    border-color: #2563eb;
+    background: #eff6ff;
+  }
+
+  body.dark #upload-zone.dragover {
+    background: #111827;
+  }
+
+  .snippet {
+    background: #0f172a;
+    color: #e5e7eb;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-family: Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    overflow-x: auto;
+  }
+
+  body.light .snippet {
+    background: #111827;
   }
 
   #chat-panel {
@@ -22,7 +169,7 @@
     border: 1px solid #dddddd;
     padding: 0.75rem;
     background: #f9fafb;
-    min-height: 420px;      /* overall chat+input area height */
+    min-height: 420px;
     max-height: 540px;
   }
 
@@ -61,7 +208,6 @@
     border-bottom-left-radius: 4px;
   }
 
-  /* Dark mode bubbles */
   body.dark .user {
     background: #1d4ed8;
     color: #e5e7eb;
@@ -101,91 +247,251 @@
   .chat-input-row input[type="text"]::placeholder {
     color: #9ca3af;
   }
-
-  #upload-zone {
-    border: 2px dashed #9ca3af;
-    padding: 0.75rem;
-    text-align: center;
-    margin-bottom: 0.75rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-    background: #f9fafb;
-    border-radius: 8px;
-  }
-
-  body.dark #upload-zone {
-    background: #020617;
-    border-color: var(--border);
-  }
-
-  #upload-zone.dragover {
-    border-color: #2563eb;
-    background: #eff6ff;
-  }
-
-  body.dark #upload-zone.dragover {
-    background: #111827;
-  }
-
-  .tier-banner {
-    margin: 0.5rem 0 0.75rem;
-    font-size: 0.85rem;
-    color: #92400e;
-    background: #fef3c7;
-    border: 1px solid #fbbf24;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-  }
-
-  body.dark .tier-banner {
-    background: #451a03;
-    color: #fef3c7;
-    border-color: #f59e0b;
-  }
 </style>
 
-<div class="chat-page">
-  <div class="chat-header-row">
+<div class="page">
+  <div class="header-row">
     <div>
-      <h2 style="margin:0 0 0.25rem;">Chat</h2>
-      <p style="margin:0;font-size:0.85rem;color:#6b7280;">
-        Ask anything, or upload a document and query it.
-      </p>
+      <h2>TheoChat dashboard</h2>
+      <p>Upload content, chat with your data, and drop the TheoChat snippet into your site.</p>
+      <p style="margin:0.1rem 0 0.25rem;font-size:0.9rem;color:#6b7280;">Meet Theo — your website’s new AI assistant.</p>
+      <p style="margin:0;font-size:0.9rem;color:#6b7280;">Status: {{ trial_status }}</p>
     </div>
-    <button id="reset-chat-btn" type="button" class="danger">Reset chat</button>
+    <div class="api-key-pill">
+      <strong>API key</strong><br>
+      <code>{{ api_key }}</code>
+    </div>
   </div>
 
-  {% if not is_subscribed %}
-    <div class="tier-banner">
-      You’re on the free tier. In a real app, some features might be limited.
-      <a href="{{ url_for('billing') }}">Manage billing →</a>
+  {% if subscription_info and subscription_info.status == "trialing" %}
+    <style>
+      .trial-banner {
+        margin-bottom: 1rem;
+        padding: 0.9rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #38bdf8;
+        background: linear-gradient(135deg, #0ea5e9 0%, #22c55e 100%);
+        color: #f9fafb;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .trial-banner-main {
+        font-size: 0.9rem;
+      }
+      .trial-banner-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      .trial-banner-meta {
+        font-size: 0.85rem;
+        opacity: 0.95;
+      }
+      .trial-banner-countdown {
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+      }
+      .trial-banner-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.4rem;
+        min-width: 110px;
+      }
+      .trial-banner-link {
+        font-size: 0.82rem;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .trial-banner-dismiss {
+        font-size: 0.78rem;
+        border: none;
+        border-radius: 999px;
+        padding: 0.25rem 0.6rem;
+        background: rgba(15,23,42,0.2);
+        color: #f9fafb;
+        cursor: pointer;
+      }
+      .trial-banner-dismiss:hover {
+        background: rgba(15,23,42,0.35);
+      }
+      @media (max-width: 640px) {
+        .trial-banner {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .trial-banner-actions {
+          align-items: flex-start;
+        }
+      }
+    </style>
+
+    <div id="trial-banner" class="trial-banner">
+      <div class="trial-banner-main">
+        <div class="trial-banner-title">
+          You're currently in your 7-day free trial.
+        </div>
+        <div class="trial-banner-meta">
+          All Pro features are enabled, including your live website widget.
+          You can manage or cancel your subscription any time on the billing page.
+          Cancel before your trial ends and you won’t be charged.
+        </div>
+        {% if trial_days_left is not none %}
+          <div class="trial-banner-countdown">
+            {% if trial_days_left > 1 %}
+              {{ trial_days_left }} days left in your trial.
+            {% elif trial_days_left == 1 %}
+              1 day left in your trial.
+            {% else %}
+              Trial ends today.
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+      <div class="trial-banner-actions">
+        <a href="{{ url_for('billing') }}" class="trial-banner-link">
+          Go to billing
+        </a>
+        <button type="button" id="trial-banner-dismiss" class="trial-banner-dismiss">
+          Dismiss for this session
+        </button>
+      </div>
     </div>
+
+    <script>
+      (function () {
+        const banner = document.getElementById("trial-banner");
+        const dismissBtn = document.getElementById("trial-banner-dismiss");
+        if (!banner || !dismissBtn || !window.sessionStorage) return;
+
+        const STORAGE_KEY = "trial-banner-dismissed";
+
+        try {
+          if (sessionStorage.getItem(STORAGE_KEY) === "1") {
+            banner.style.display = "none";
+            return;
+          }
+        } catch (e) {
+          console.warn("sessionStorage unavailable", e);
+        }
+
+        dismissBtn.addEventListener("click", function () {
+          banner.style.display = "none";
+          try {
+            sessionStorage.setItem(STORAGE_KEY, "1");
+          } catch (e) {
+            console.warn("sessionStorage write failed", e);
+          }
+        });
+      })();
+    </script>
   {% endif %}
 
-  <!-- FILE UPLOAD / RAG -->
-  <div id="upload-zone">
-    <strong>File upload (RAG)</strong><br>
-    Click or drag a .txt / .md / .pdf file here
+  <div class="stats-grid">
+    <a href="{{ url_for('knowledge') }}" style="text-decoration:none;color:inherit;">
+      <div class="stat-card">
+        <div class="stat-label">Knowledge chunks</div>
+        <div class="stat-value" id="chunk-count-value">{{ chunk_count or 0 }}</div>
+      </div>
+    </a>
+    <div class="stat-card">
+      <div class="stat-label">Messages used</div>
+      <div class="stat-value">{{ usage_messages or 0 }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Uploads</div>
+      <div class="stat-value">{{ usage_uploads or 0 }}</div>
+    </div>
   </div>
-  <input type="file" id="file-input" style="display:none" />
 
-  <!-- Chat panel: chat area + sticky-ish input row -->
-  <div id="chat-panel">
-    <div id="chat"></div>
-    <div class="chat-input-row">
-      <input id="msg" type="text" placeholder="Type a message and press Enter..." />
-      <button id="send" class="primary" type="button">Send</button>
+  <div class="main-grid">
+    <div class="card">
+      <h3>File upload (RAG)</h3>
+      <p>Upload .txt / .md / .pdf to add to the knowledge base.</p>
+      <label style="display:block;font-size:0.85rem;margin-bottom:0.25rem;">
+        Optional label (e.g. "Menu", "FAQ"):
+        <input type="text" id="upload-label" style="width:100%;margin-top:0.2rem;padding:0.3rem 0.4rem;font-size:0.9rem;border:1px solid #d1d5db;border-radius:6px;">
+      </label>
+      <div id="upload-zone">
+        <strong>Click or drag a file here</strong><br>
+        We'll chunk, embed, and store it for chat.
+      </div>
+      <input type="file" id="file-input" style="display:none" />
+    </div>
+
+    <div class="card">
+      <h3>Chat preview</h3>
+      <p>Ask questions and watch responses stream from /chat_stream.</p>
+      <div id="chat-panel">
+        <div id="chat"></div>
+        <div class="chat-input-row">
+          <input id="msg" type="text" placeholder="Type a message and press Enter..." />
+          <button id="send" class="primary" type="button">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Business settings</h3>
+    <p>Update your workspace name and restrict where the embed can be used.</p>
+    <form method="post" action="{{ url_for('business_settings') }}" style="display:flex;flex-direction:column;gap:0.65rem;max-width:520px;">
+      <label style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.95rem;">
+        <span>Business name</span>
+        <input type="text" name="name" value="{{ business_name }}" style="padding:0.5rem 0.6rem;border:1px solid #d1d5db;border-radius:6px;" />
+      </label>
+      <label style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.95rem;">
+        <span>Allowed domains (comma-separated)</span>
+        <input type="text" name="allowed_domains" value="{{ allowed_domains }}" placeholder="e.g. example.com, app.example.com" style="padding:0.5rem 0.6rem;border:1px solid #d1d5db;border-radius:6px;" />
+      </label>
+      <div class="text-sm text-gray-500 mt-1" style="margin:0.25rem 0 0.5rem;font-size:0.9rem;color:#6b7280;">
+        Allowed domains control which hostnames can use this API key in the embed snippet. Leave blank to allow all.
+      </div>
+      <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.9rem;margin-top:0.5rem;">
+        <input type="checkbox" name="contact_enabled" id="contact_enabled" {% if contact_enabled %}checked{% endif %} />
+        Allow TheoChat to send me contact requests
+      </label>
+      <label style="display:block;margin-top:0.4rem;font-size:0.85rem;">
+        Contact email
+        <input
+          type="email"
+          name="contact_email"
+          id="contact_email"
+          value="{{ contact_email or '' }}"
+          placeholder="you@example.com"
+          style="width:100%;margin-top:0.2rem;padding:0.4rem 0.5rem;border-radius:6px;border:1px solid #d1d5db;font-size:0.9rem;"
+          {% if not contact_enabled %}disabled{% endif %}
+        />
+      </label>
+      <button class="primary" type="submit" style="width:fit-content;">Save</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Embed on your site</h3>
+    <p>Paste this snippet before &lt;/body&gt; or in your tag manager.</p>
+    <div class="snippet" id="embed-snippet">
+      &lt;script src="/embed.js?api_key={{ api_key }}" async&gt;&lt;/script&gt;
+    </div>
+    <div style="display:flex;gap:0.65rem;align-items:center;margin-top:0.5rem;flex-wrap:wrap;">
+      <button type="button" class="primary" id="copy-snippet-btn" style="padding:0.4rem 0.75rem;font-size:0.9rem;">Copy snippet</button>
+      <a href="{{ url_for('setup') }}" style="font-size:0.9rem;color:#2563eb;text-decoration:none;">
+        Need help adding this to your website? Click here
+      </a>
     </div>
   </div>
 </div>
 
 <script>
 const chat = document.getElementById("chat");
-const msg  = document.getElementById("msg");
+const msg = document.getElementById("msg");
 const send = document.getElementById("send");
-const resetBtn = document.getElementById("reset-chat-btn");
 const uploadZone = document.getElementById("upload-zone");
 const fileInput = document.getElementById("file-input");
+const labelInput = document.getElementById("upload-label");
+const copySnippetBtn = document.getElementById("copy-snippet-btn");
+const embedSnippetEl = document.getElementById("embed-snippet");
 
 function addBubble(text, cls) {
   const div = document.createElement("div");
@@ -198,7 +504,7 @@ function addBubble(text, cls) {
 
 function setDisabled(disabled) {
   send.disabled = disabled;
-  msg.disabled  = disabled;
+  msg.disabled = disabled;
 }
 
 async function sendMsg() {
@@ -219,7 +525,8 @@ async function sendMsg() {
     });
 
     if (!res.ok) {
-      botDiv.textContent = "Error: " + res.status + " " + res.statusText;
+      const errText = await res.text();
+      botDiv.textContent = errText || ("Error: " + res.status + " " + res.statusText);
       return;
     }
 
@@ -243,24 +550,9 @@ async function sendMsg() {
   }
 }
 
-// Reset chat
-if (resetBtn) {
-  resetBtn.addEventListener("click", async () => {
-    try {
-      const res = await fetch("/reset_chat", { method: "POST" });
-      if (!res.ok) {
-        console.error("Reset failed", await res.text());
-        return;
-      }
-      chat.innerHTML = "<div style='opacity:0.6;font-size:0.85rem;text-align:center;'>Chat reset. History cleared.</div>";
-    } catch (e) {
-      console.error("Reset error", e);
-    }
-  });
-}
-
-// Upload zone interactions
-uploadZone.addEventListener("click", () => fileInput.click());
+uploadZone.addEventListener("click", () => {
+  fileInput.click();
+});
 
 uploadZone.addEventListener("dragover", (e) => {
   e.preventDefault();
@@ -279,7 +571,6 @@ uploadZone.addEventListener("drop", async (e) => {
   await uploadFile(file);
 });
 
-// File input change
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   await uploadFile(file);
@@ -290,6 +581,8 @@ async function uploadFile(file) {
 
   const fd = new FormData();
   fd.append("file", file);
+  const labelValue = labelInput ? labelInput.value.trim() : "";
+  fd.append("label", labelValue);
 
   addBubble(`Uploaded: ${file.name}`, "user");
   const botDiv = addBubble("Processing file...", "bot");
@@ -311,14 +604,50 @@ async function uploadFile(file) {
       `File processed: ${data.filename}\n` +
       `Chunks stored: ${data.num_chunks}\n` +
       `You can now ask questions about this document.`;
+    const chunkCountEl = document.getElementById("chunk-count-value");
+    if (chunkCountEl && typeof data.total_chunks === "number") {
+      chunkCountEl.textContent = data.total_chunks;
+    }
   } catch (e) {
     botDiv.textContent = "Upload failed";
   }
 }
 
 send.addEventListener("click", sendMsg);
-msg.addEventListener("keypress", (e)=>{ if (e.key === "Enter") sendMsg(); });
+msg.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMsg(); });
 
+// Toggle contact email field based on checkbox
+const contactCheckbox = document.getElementById("contact_enabled");
+const contactEmailInput = document.getElementById("contact_email");
+
+function updateEmailState() {
+  if (!contactCheckbox || !contactEmailInput) return;
+  contactEmailInput.disabled = !contactCheckbox.checked;
+  contactEmailInput.style.opacity = contactEmailInput.disabled ? "0.5" : "1";
+}
+
+if (contactCheckbox) {
+  contactCheckbox.addEventListener("change", updateEmailState);
+  updateEmailState();
+}
+
+// Copy embed snippet helper
+if (copySnippetBtn && embedSnippetEl) {
+  copySnippetBtn.addEventListener("click", async () => {
+    const text = embedSnippetEl.textContent || "";
+    try {
+      await navigator.clipboard.writeText(text.trim());
+      copySnippetBtn.textContent = "Copied!";
+      setTimeout(() => { copySnippetBtn.textContent = "Copy snippet"; }, 1500);
+    } catch (e) {
+      copySnippetBtn.textContent = "Copy failed";
+      setTimeout(() => { copySnippetBtn.textContent = "Copy snippet"; }, 1500);
+    }
+  });
+}
 </script>
 
 {% endblock %}
+
+
+

@@ -2,5 +2,7 @@ flask
 flask-login
 python-dotenv
 openai
-stripe
+stripe>=10.0.0
 PyPDF2
+requests
+beautifulsoup4

@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .setup-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .setup-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .status-pill {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  body.dark .status-pill {
+    border-color: #1f2937;
+    background: #020617;
+  }
+
+  .setup-banner {
+    font-size: 0.9rem;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    padding: 0.55rem 0.8rem;
+    border-radius: 8px;
+  }
+
+  body.dark .setup-banner {
+    background: #451a03;
+    color: #fef3c7;
+    border-color: #f59e0b;
+  }
+
+  .setup-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr);
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 800px) {
+    .setup-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem;
+  }
+
+  body.dark .card {
+    background: #0b1224;
+    border-color: #1f2937;
+  }
+
+  .setup-main .step-title {
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .code-snippet {
+    background: #0f172a;
+    color: #e5e7eb;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-family: Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    overflow-x: auto;
+    margin: 0.4rem 0 0.6rem;
+  }
+
+  body.light .code-snippet {
+    background: #111827;
+  }
+
+  .helper-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .helper-body {
+    font-size: 0.92rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .helper-select {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 0.9rem;
+  }
+
+  body.dark .helper-select {
+    background: #020617;
+    border-color: #1f2937;
+    color: #e5e7eb;
+  }
+
+  .helper-instructions {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    color: #4b5563;
+  }
+
+  body.dark .helper-instructions {
+    color: #e5e7eb;
+  }
+
+  .steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .step-card {
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    padding: 0.75rem 0.9rem;
+    background: #f9fafb;
+  }
+
+  body.dark .step-card {
+    border-color: #1f2937;
+    background: #020617;
+  }
+
+  .step-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .step-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #111827;
+  }
+
+  body.dark .step-label {
+    background: #1f2937;
+    color: #e5e7eb;
+  }
+
+  .step-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .step-body {
+    font-size: 0.9rem;
+    color: #4b5563;
+    margin: 0.25rem 0 0.35rem;
+  }
+
+  body.dark .step-body {
+    color: #e5e7eb;
+  }
+</style>
+
+<div class="setup-page">
+  <div class="setup-header-row">
+    <div>
+      <h2 style="margin:0 0 0.25rem;">Setup assistant</h2>
+      <p style="margin:0;color:#6b7280;">Install your TheoChat widget on your website. Meet Theo — your website’s new AI assistant.</p>
+    </div>
+    <div class="status-pill">
+      {% if trial_status == "Subscribed" %}
+        Active
+      {% elif trial_status == "On trial" %}
+        On trial
+      {% else %}
+        Free / not subscribed
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not current_user.has_active_subscription %}
+    <div class="setup-banner">
+      You can review the setup steps here, but your live TheoChat widget will only work after you start your 7-day free trial.
+      <a href="{{ url_for('billing') }}">Go to billing</a>
+    </div>
+  {% endif %}
+
+  <div class="setup-grid">
+    <div class="card setup-main">
+      <p style="margin:0 0 0.5rem;">Follow these steps to install the TheoChat widget on your website.</p>
+
+      <div class="steps-container">
+
+        <!-- Step 1 -->
+        <div class="step-card">
+          <div class="step-card-header">
+            <span class="step-label">Step 1</span>
+            <p class="step-title">Check your TheoChat API key</p>
+          </div>
+          <p class="step-body">
+            Your TheoChat API key for this business:
+          </p>
+          <div class="code-snippet">{{ api_key or "No API key found." }}</div>
+
+          {% if allowed_domains %}
+            <p class="step-body" style="margin-bottom:0;">
+              Allowed domains: {{ allowed_domains }}<br>
+              Only pages on these domains will be allowed to use your TheoChat widget.
+            </p>
+          {% else %}
+            <p class="step-body" style="margin-bottom:0;">
+              No allowed domains configured yet. Add your domain in business settings so only your site can use the widget.
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card">
+          <div class="step-card-header">
+            <span class="step-label">Step 2</span>
+            <p class="step-title">Add the script to your site</p>
+          </div>
+      <p class="step-body">
+        Paste this snippet to enable TheoChat before the closing &lt;/body&gt; tag or into your website builder's custom code area. The <code>data-api-key</code> attribute identifies your TheoChat business.
+      </p>
+        <div class="code-snippet" id="embed-snippet">
+          &lt;script
+            src="{{ url_for('embed_js', _external=True) }}"
+            data-api-key="{{ api_key }}"
+            async
+          &gt;&lt;/script&gt;
+        </div>
+        <button type="button" class="primary" id="copy-snippet-btn">Copy snippet</button>
+        <p style="margin:0.5rem 0 0.25rem;font-size:0.85rem;color:#6b7280;">
+          Optional: customise the button text with <code>data-button-label</code>. Example:
+        </p>
+        <div class="code-snippet" style="margin-top:0.35rem;">
+          &lt;script
+            src="{{ url_for('embed_js', _external=True) }}"
+            data-api-key="{{ api_key }}"
+            data-button-label="Chat with Theo"
+            async
+          &gt;&lt;/script&gt;
+        </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card">
+          <div class="step-card-header">
+            <span class="step-label">Step 3</span>
+            <p class="step-title">Test the widget</p>
+          </div>
+          <ul style="margin:0 0 0.25rem 1.1rem;color:#4b5563;">
+            <li>Open your website in a new tab.</li>
+            <li>Look for the "Chat with us" button.</li>
+            <li>Ask a couple of questions based on your uploaded knowledge.</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card setup-helper-card">
+      <div class="helper-header">
+        <div>
+          <h3 style="margin:0;">Setup helper</h3>
+          <p style="margin:0;font-size:0.85rem;color:#6b7280;">Choose your website platform to see where to paste the snippet.</p>
+        </div>
+      </div>
+
+      {% if not current_user.has_active_subscription %}
+        <p style="font-size:0.85rem;color:#b91c1c;">
+          You can review these instructions, but the live TheoChat widget only works after you start your 7-day free trial.
+        </p>
+      {% endif %}
+
+      <div class="helper-body">
+        <label for="builder-select">Website builder</label>
+        <select id="builder-select" class="helper-select">
+          <option value="generic">Custom / other</option>
+          <option value="wordpress">WordPress</option>
+          <option value="wix">Wix</option>
+        <option value="squarespace">Squarespace</option>
+        <option value="shopify">Shopify</option>
+        <option value="webflow">Webflow</option>
+        <option value="dotgo">dotgo</option>
+        <option value="static">Static HTML / custom code</option>
+      </select>
+
+        <div id="helper-instructions" class="helper-instructions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const instructionsByBuilder = {
+  generic: [
+    "1) Log into your website admin or code editor.",
+    "2) Find the area where you can add custom code or scripts that apply to all pages.",
+    "3) Paste the embed snippet before the closing </body> tag.",
+    "4) Save and publish your changes.",
+    "5) Open your live site and confirm the 'Chat with us' button appears."
+  ].join("\n\n"),
+
+  wordpress: [
+    "WordPress (no-page-builder, theme-based):",
+    "",
+    "1) Log in to your WordPress admin.",
+    "2) Go to Appearance -> Theme File Editor, or use a 'Header & Footer' plugin.",
+    "3) Locate footer.php or the plugin's 'Footer Scripts' area.",
+    "4) Paste the embed snippet just before the closing </body> tag.",
+    "5) Save, clear any cache if you use a caching plugin, and reload your site."
+  ].join("\n\n"),
+
+  wix: [
+    "Wix:",
+    "",
+    "1) Go to your Wix dashboard.",
+    "2) Go to Settings -> Custom code.",
+    "3) Add a new custom code snippet.",
+    "4) Paste the embed snippet, choose 'All pages', and place it in the Body - end.",
+    "5) Save and publish your site."
+  ].join("\n\n"),
+
+  squarespace: [
+    "Squarespace:",
+    "",
+    "1) Log in to Squarespace.",
+    "2) Go to Settings -> Advanced -> Code Injection.",
+    "3) In the Footer area, paste the embed snippet.",
+    "4) Save and refresh your live site."
+  ].join("\n\n"),
+
+  shopify: [
+    "Shopify:",
+    "",
+    "1) Log in to your Shopify admin.",
+    "2) Go to Online Store -> Themes.",
+    "3) Click 'Edit code' on your active theme.",
+    "4) Open layout/theme.liquid.",
+    "5) Paste the embed snippet just before the closing </body> tag.",
+    "6) Save and reload your storefront."
+  ].join("\n\n"),
+
+  webflow: [
+    "Webflow:",
+    "",
+    "1) Open your Webflow project.",
+    "2) Go to Project settings -> Custom code.",
+    "3) In the Footer code area, paste the embed snippet.",
+    "4) Save and publish your site.",
+    "5) Verify the widget appears on the published domain."
+  ].join("\n\n"),
+
+  dotgo: [
+    "dotgo:",
+    "",
+    "1) Log in to your dotgo account and open the site you want to edit.",
+    "2) Look for the settings or area where you can add custom code or scripts (often under 'Settings', 'Custom code', or 'Footer code').",
+    "3) Paste the TheoChat embed snippet there so it loads on all pages (ideally in the footer or before the closing </body> tag).",
+    "4) Save and publish your changes.",
+    "5) Open your live site and check that the 'Chat with us' button appears."
+  ].join("\n\n"),
+
+  static: [
+    "Static HTML / custom code:",
+    "",
+    "1) Open your main layout or template file (for example base.html, layout.html, or index.html).",
+    "2) Find the closing </body> tag.",
+    "3) Paste the embed snippet on the line above </body>.",
+    "4) Deploy or upload your updated files.",
+    "5) Open the live site and confirm the widget appears."
+  ].join("\n\n"),
+};
+
+const selectEl = document.getElementById("builder-select");
+const helperEl = document.getElementById("helper-instructions");
+
+function updateHelper() {
+  const key = selectEl.value;
+  helperEl.textContent = instructionsByBuilder[key] || instructionsByBuilder["generic"];
+}
+
+if (selectEl && helperEl) {
+  selectEl.addEventListener("change", updateHelper);
+  updateHelper();
+}
+
+// Copy snippet button
+const copyBtn = document.getElementById("copy-snippet-btn");
+const snippetEl = document.getElementById("embed-snippet");
+
+if (copyBtn && snippetEl) {
+  copyBtn.addEventListener("click", async () => {
+    const text = snippetEl.textContent || "";
+    try {
+      await navigator.clipboard.writeText(text.trim());
+      copyBtn.textContent = "Copied!";
+      setTimeout(() => { copyBtn.textContent = "Copy snippet"; }, 1500);
+    } catch (e) {
+      console.error("Copy failed:", e);
+      copyBtn.textContent = "Copy failed";
+      setTimeout(() => { copyBtn.textContent = "Copy snippet"; }, 1500);
+    }
+  });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-container">
+  <h1 style="margin:0 0 0.4rem;">TheoChat pricing</h1>
+  <p style="margin:0 0 1rem;color:#6b7280;">Meet Theo — your website’s new AI assistant, with simple, transparent pricing.</p>
+
+  <div class="card" style="max-width:520px;">
+    <h2 style="margin:0 0 0.35rem;">TheoChat Pro</h2>
+    <p style="margin:0 0 0.5rem;color:#6b7280;">7-day free trial, then £19/month. Cancel anytime from your billing page.</p>
+    <p style="margin:0;font-weight:700;font-size:1.2rem;">£19 / month</p>
+    <div style="margin-top:0.85rem;">
+      <a href="{{ url_for('register') }}" class="primary" style="padding:0.5rem 0.9rem;display:inline-block;text-decoration:none;">Start free 7-day trial</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

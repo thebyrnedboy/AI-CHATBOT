@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>My Chatbot SaaS</title>
+  <title>TheoChat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/theochat-logo-mark.png') }}">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='img/theochat-logo-mark.png') }}">
   <style>
     :root {
       --bg: #f7f7f7;
@@ -16,7 +21,7 @@
       --muted: #6b7280;
     }
 
-/* Dark mode overrides */
+    /* Dark mode overrides */
     body.dark {
       --bg: #020617;
       --card: #020617;
@@ -28,7 +33,6 @@
       --muted: #9ca3af;
     }
 
-
     * {
       box-sizing: border-box;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -36,15 +40,16 @@
 
     body {
       margin: 0;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       transition: background 0.2s ease, color 0.2s ease;
     }
 
     .shell {
-      max-width: 900px;
+      max-width: 1040px;
       margin: 0 auto;
-      padding: 1.5rem 1rem 3rem;
+      padding: 1.5rem 1.25rem 3rem;
     }
 
     header {
@@ -55,9 +60,53 @@
       margin-bottom: 1rem;
     }
 
+    @media (max-width: 640px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .nav-right {
+        justify-content: flex-start;
+      }
+    }
+
     header h1 {
       font-size: 1.4rem;
       margin: 0;
+    }
+
+    .site-logo .logo-link {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .site-logo-img {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      object-fit: cover;
+    }
+
+    .site-logo-text {
+      font-weight: 600;
+      color: inherit;
+    }
+
+    .theochat-logo-full {
+      max-width: 220px;
+      height: auto;
+      display: block;
+    }
+
+    .theochat-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      object-fit: cover;
     }
 
     .nav-right {
@@ -65,6 +114,158 @@
       align-items: center;
       gap: 0.5rem;
       font-size: 0.9rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .user-menu {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .user-menu-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .user-menu-toggle span.user-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: #4b5563;
+    }
+
+    body.dark .user-menu-toggle span.user-avatar {
+      background: #111827;
+      color: #e5e7eb;
+    }
+
+    .user-menu-toggle span.user-email-text {
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-menu-toggle span.chevron {
+      font-size: 0.7rem;
+      transform-origin: center;
+      transition: transform 0.15s ease;
+    }
+
+    .user-menu-dropdown {
+      position: absolute;
+      right: 0;
+      top: 120%;
+      min-width: 220px;
+      background: var(--card);
+      border-radius: 0.75rem;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      z-index: 1000;
+      display: none;
+    }
+
+    .user-menu-dropdown.open {
+      display: block;
+    }
+
+    .user-menu-dropdown-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .user-menu-dropdown-email {
+      font-weight: 500;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-menu-dropdown-footer {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .user-menu-logout-btn {
+      font-size: 0.8rem;
+    }
+
+    .nav-right form {
+      margin: 0;
+      display: inline;
+    }
+
+    .main-tabs {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 0.25rem;
+    }
+
+    .tab-link {
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.6rem 0.6rem 0 0;
+      text-decoration: none;
+      color: #4b5563;
+      font-size: 0.9rem;
+      border: 1px solid transparent;
+    }
+
+    .tab-link:hover {
+      background-color: #f3f4f6;
+      color: #111827;
+    }
+
+    .tab-link-active {
+      background-color: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-bottom-color: #ffffff;
+      color: #111827;
+      font-weight: 600;
+    }
+
+    body.dark .main-tabs {
+      border-bottom-color: #1f2937;
+    }
+
+    body.dark .tab-link {
+      color: #9ca3af;
+    }
+
+    body.dark .tab-link:hover {
+      background-color: #0b1224;
+      color: #e5e7eb;
+    }
+
+    body.dark .tab-link-active {
+      background-color: #0b1224;
+      border-color: #1f2937;
+      border-bottom-color: #0b1224;
+      color: #e5e7eb;
     }
 
     a {
@@ -115,6 +316,12 @@
       transition: background 0.2s ease, border-color 0.2s ease;
     }
 
+    .page-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+
     .flash {
       padding: 0.5rem 0.75rem;
       border-radius: 6px;
@@ -142,6 +349,16 @@
       color: #dcfce7;
     }
 
+    .flash.locked {
+      background: #e0f2fe;
+      color: #075985;
+    }
+
+    body.dark .flash.locked {
+      background: #0c4a6e;
+      color: #e0f2fe;
+    }
+
     .pill {
       padding: 0.15rem 0.5rem;
       border-radius: 999px;
@@ -149,6 +366,18 @@
       border: 1px solid var(--border);
       background: #f3f4f6;
       color: var(--muted);
+    }
+
+    .pill--trial {
+      border-color: #f59e0b;
+      color: #b45309;
+      background: #fffbeb;
+    }
+
+    .pill--subscribed {
+      border-color: #16a34a;
+      color: #166534;
+      background: #dcfce7;
     }
 
     body.dark .pill {
@@ -160,78 +389,86 @@
       padding: 0.25rem 0.6rem;
     }
   </style>
-
-  <!-- Apply stored theme as early as possible to reduce flash -->
-  <script>
-    (function () {
-      const toggle = document.getElementById("theme-toggle");
-
-      if (!toggle) return;
-
-      function applyInitialTheme() {
-        const isDark = document.body.classList.contains("dark");
-        toggle.textContent = isDark ? "Light mode" : "Dark mode";
-      }
-
-      function toggleTheme() {
-        const isDarkNow = document.body.classList.toggle("dark");
-        try {
-          localStorage.setItem("theme", isDarkNow ? "dark" : "light");
-        } catch (e) {
-          // ignore if localStorage unavailable
-        }
-        toggle.textContent = isDarkNow ? "Light mode" : "Dark mode";
-      }
-
-      // Set initial label based on current body class
-      applyInitialTheme();
-      toggle.addEventListener("click", toggleTheme);
-    })();
-  </script>
-</body>
-</html>
 </head>
 <body>
-<script>
-  // Load theme BEFORE anything renders
-  (function () {
-    try {
-      const stored = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const useDark = stored === "dark" || (!stored && prefersDark);
-
-      if (useDark) {
-        document.body.classList.add("dark");
+  <script>
+    // Apply stored theme before UI renders to reduce flicker.
+    (function () {
+      try {
+        const stored = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const useDark = stored === "dark" || (!stored && prefersDark);
+        if (useDark) {
+          document.body.classList.add("dark");
+        }
+      } catch (e) {
+        // ignore storage errors
       }
-    } catch (e) {
-      // ignore
-    }
-  })();
-</script>
+    })();
+  </script>
+
   <div class="shell">
     <header>
-      <h1>My Chatbot SaaS</h1>
+      <h1 class="site-logo">
+        <a
+          class="logo-link"
+          href="{% if current_user.is_authenticated %}{{ url_for('index') }}{% else %}{{ url_for('marketing') }}{% endif %}"
+        >
+          <img
+            src="{{ url_for('static', filename='img/theochat-logo-mark.png') }}"
+            alt="TheoChat logo"
+            class="site-logo-img"
+          />
+          <span class="site-logo-text">TheoChat</span>
+        </a>
+      </h1>
       <div class="nav-right">
-        <!-- Theme toggle button -->
         <button id="theme-toggle" type="button" class="pill">Dark mode</button>
 
         {% if current_user.is_authenticated %}
-          <span class="pill">
-            {{ email if email is defined else current_user.email }}
-          </span>
-          {% if is_subscribed is defined and is_subscribed %}
-            <span class="pill" style="border-color:#16a34a;color:#15803d;">Subscribed</span>
-          {% endif %}
-          <a href="{{ url_for('billing') }}">Billing</a>
-          <form method="post" action="{{ url_for('logout') }}" style="margin:0;">
-            <button class="danger" type="submit">Logout</button>
-          </form>
-        {% else %}
-          <a href="{{ url_for('login') }}">Login</a>
-          <a href="{{ url_for('register') }}">Register</a>
+          <div class="user-menu" id="user-menu">
+            <button type="button" class="user-menu-toggle" id="user-menu-toggle">
+              <span class="user-avatar">
+                {{ (current_user.email[0]|upper) if current_user.email else "U" }}
+              </span>
+              <span class="user-email-text">
+                {{ email if email is defined else current_user.email }}
+              </span>
+              <span class="chevron" id="user-menu-chevron">▾</span>
+            </button>
+            <div class="user-menu-dropdown" id="user-menu-dropdown">
+              <div class="user-menu-dropdown-row">
+                <div class="user-menu-dropdown-email">
+                  {{ email if email is defined else current_user.email }}
+                </div>
+                {% if is_subscribed is defined and is_subscribed %}
+                  <span class="pill pill--subscribed">Subscribed</span>
+                {% elif trial_status is defined and trial_status == 'On trial' %}
+                  <span class="pill pill--trial">On trial · 7-day free</span>
+                {% endif %}
+              </div>
+              <div class="user-menu-dropdown-footer">
+                <form method="post" action="{{ url_for('logout') }}" style="margin:0;">
+                  <button class="danger user-menu-logout-btn" type="submit">Logout</button>
+                </form>
+              </div>
+            </div>
+          </div>
         {% endif %}
       </div>
     </header>
+    <nav class="main-tabs">
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('index') }}" class="tab-link{% if request.endpoint in ['index'] %} tab-link-active{% endif %}">Home</a>
+        <a href="{{ url_for('contact_requests') }}" class="tab-link{% if request.endpoint in ['contact_requests'] %} tab-link-active{% endif %}">Contact requests</a>
+        <a href="{{ url_for('setup') }}" class="tab-link{% if request.endpoint in ['setup'] %} tab-link-active{% endif %}">Setup</a>
+        <a href="{{ url_for('billing') }}" class="tab-link{% if request.endpoint in ['billing'] %} tab-link-active{% endif %}">Billing</a>
+      {% else %}
+        <a href="{{ url_for('marketing') }}" class="tab-link{% if request.endpoint in ['marketing'] %} tab-link-active{% endif %}">Home</a>
+        <a href="{{ url_for('login') }}" class="tab-link{% if request.endpoint in ['login'] %} tab-link-active{% endif %}">Login</a>
+        <a href="{{ url_for('register') }}" class="tab-link{% if request.endpoint in ['register'] %} tab-link-active{% endif %}">Register</a>
+      {% endif %}
+    </nav>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -244,6 +481,7 @@
     <main>
       {% block content %}{% endblock %}
     </main>
+    <div style="margin-top:1rem;font-size:0.85rem;color:var(--muted);text-align:center;">© TheoChat — theochat.co.uk</div>
   </div>
 
   <script>
@@ -259,15 +497,52 @@
       function toggleTheme() {
         const isDarkNow = !document.body.classList.contains("dark");
         document.body.classList.toggle("dark", isDarkNow);
-        localStorage.setItem("theme", isDarkNow ? "dark" : "light");
+        try {
+          localStorage.setItem("theme", isDarkNow ? "dark" : "light");
+        } catch (e) {
+          // ignore storage errors
+        }
         updateButtonText();
       }
 
-      // Update button label based on initial theme
       updateButtonText();
       toggle.addEventListener("click", toggleTheme);
+    })();
+
+    (function () {
+      const toggle = document.getElementById("user-menu-toggle");
+      const dropdown = document.getElementById("user-menu-dropdown");
+      const chevron = document.getElementById("user-menu-chevron");
+      if (!toggle || !dropdown) return;
+
+      function closeMenu() {
+        dropdown.classList.remove("open");
+        if (chevron) {
+          chevron.style.transform = "rotate(0deg)";
+        }
+      }
+
+      toggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains("open");
+        if (isOpen) {
+          closeMenu();
+        } else {
+          dropdown.classList.add("open");
+          if (chevron) {
+            chevron.style.transform = "rotate(180deg)";
+          }
+        }
+      });
+
+      document.addEventListener("click", function () {
+        closeMenu();
+      });
+
+      dropdown.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
     })();
   </script>
 </body>
 </html>
-

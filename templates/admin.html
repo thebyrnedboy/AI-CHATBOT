@@ -1,51 +1,65 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; }
-    table { width:100%; border-collapse: collapse; margin-top:1rem; }
-    th, td { border:1px solid #ccc; padding:.4rem .6rem; text-align:left; font-size:.95rem; }
-    th { background:#eee; }
-    .ok { color:green; font-weight:600; }
-    .bad { color:red; font-weight:600; }
-    .top { display:flex; justify-content: space-between; align-items:center; margin-bottom:1rem; }
-    .btn { padding:.4rem .8rem; border:1px solid #ccc; border-radius:8px; text-decoration:none; color:#111; }
-    form { display:inline; }
-  </style>
-</head>
-<body>
-  <div class="top">
-    <h1>Admin</h1>
-    <div>
-      <a class="btn" href="/">Home</a>
-      <form method="post" action="/logout"><button class="btn" type="submit">Logout</button></form>
-    </div>
-  </div>
+{% extends "base.html" %}
+{% block content %}
+<style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+  th, td {
+    border: 1px solid #e5e7eb;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    font-size: 0.95rem;
+  }
+  th {
+    background: #f9fafb;
+  }
+  body.dark th {
+    background: #0f172a;
+  }
+  .pill {
+    display: inline-block;
+    margin-right: 0.35rem;
+  }
+</style>
 
-  <p>Logged in as: {{ username }}</p>
-  <p>Redis URL: <code>{{ info.redis_url }}</code></p>
-  <p>Redis status:
-    {% if info.redis_ok %}<span class="ok">OK</span>{% else %}<span class="bad">NOT CONNECTED</span>{% endif %}
-    {% if info.error %}<span class="bad"> ({{ info.error }})</span>{% endif %}
-  </p>
+<h2 style="margin:0 0 .5rem;">Admin dashboard</h2>
+<p style="margin:0;font-size:0.95rem;color:#6b7280;">Visible only to {{ ADMIN_EMAIL }}.</p>
 
-  <p>Limiter keys found: <strong>{{ info.keys_found or 0 }}</strong></p>
-  <p>Total keys in DB: <strong>{{ info.dbsize or 0 }}</strong></p>
+<div style="margin-top:0.75rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+  <span class="pill">Users: {{ stats.total_users }}</span>
+  <span class="pill">Messages: {{ stats.total_messages }}</span>
+  <span class="pill">Document chunks: {{ stats.total_chunks }}</span>
+</div>
 
-  <table>
-    <thead><tr><th>Key</th><th>Preview</th></tr></thead>
-    <tbody>
-      {% for k in keys %}
-        <tr><td><code>{{ k.key }}</code></td><td><code>{{ k.val if k.val is not none else "" }}</code></td></tr>
-      {% endfor %}
-      {% if not keys %}
-        <tr><td colspan="2">No limiter keys yet. Hit /chat or /status a few times and refresh.</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
-</body>
-</html>
-
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Email</th>
+      <th>Business</th>
+      <th>API key</th>
+      <th>Subscription</th>
+      <th>Messages</th>
+      <th>Doc chunks</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.business_name or "—" }}</td>
+        <td><code>{{ u.business_api_key or "—" }}</code></td>
+        <td>{{ u.stripe_subscription_status or "none" }}</td>
+        <td>{{ u.message_count }}</td>
+        <td>{{ u.chunk_count }}</td>
+      </tr>
+    {% endfor %}
+    {% if not users %}
+      <tr><td colspan="5">No users yet.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endblock %}

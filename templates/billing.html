@@ -1,64 +1,312 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>Billing</h2>
-
-{% if is_subscribed %}
-  <p style="font-size:0.9rem;color:#16a34a;">
-    Your subscription is <strong>active</strong>.
-  </p>
-{% else %}
-  <p style="font-size:0.9rem;color:#6b7280;">
-    You’re not currently subscribed.
-  </p>
-{% endif %}
-
-{% if not stripe_configured %}
-  <p style="margin-top:0.5rem;font-size:0.85rem;color:#b91c1c;">
-    Stripe is not configured. Set <code>STRIPE_SECRET_KEY</code>, <code>STRIPE_PRICE_ID</code>,
-    and <code>STRIPE_WEBHOOK_SECRET</code> in your <code>.env</code> to enable subscriptions.
-  </p>
-{% else %}
-  <div style="margin-top:1rem;">
-    <button id="checkout-btn" class="primary" type="button">
-      Start subscription
-    </button>
-    <div id="billing-status" style="margin-top:0.75rem;font-size:0.85rem;color:#6b7280;"></div>
-  </div>
-{% endif %}
-
-<script>
-{% if stripe_configured %}
-const btn = document.getElementById("checkout-btn");
-const statusDiv = document.getElementById("billing-status");
-
-btn.addEventListener("click", async () => {
-  statusDiv.textContent = "Creating checkout session...";
-  try {
-    const res = await fetch("/create-checkout-session", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"}
-    });
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      statusDiv.textContent = "Error: " + (data.error || res.statusText);
-      return;
-    }
-
-    if (data.url) {
-      window.location = data.url;
-      return;
-    }
-
-    statusDiv.textContent =
-      "Checkout session created. ID: " + data.id +
-      ". You can redirect using data.url when available.";
-  } catch (e) {
-    statusDiv.textContent = "Failed to create checkout session.";
+<style>
+  .billing-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
   }
-});
-{% endif %}
-</script>
 
+  .status-pill {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  body.dark .status-pill {
+    border-color: #1f2937;
+    background: #020617;
+  }
+
+  .subscription-panel {
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  body.dark .subscription-panel {
+    border-color: #1f2937;
+    background: #020617;
+  }
+
+  .subscription-panel p,
+  .subscription-panel h3 {
+    color: #111827;
+  }
+
+  body.dark .subscription-panel p,
+  body.dark .subscription-panel h3 {
+    color: #e5e7eb;
+  }
+
+  /* Dark mode overrides for billing cards/alerts */
+  body.dark .plan-summary {
+    background: #0b1120;
+    border-color: #1f2937;
+    color: #e5e7eb;
+  }
+
+  body.dark .plan-summary p,
+  body.dark .plan-summary div {
+    color: #e5e7eb;
+  }
+
+  body.dark .billing-trial-banner {
+    background: #0b1224;
+    color: #c7d2fe;
+    border: 1px solid #1f2937;
+  }
+
+  body.dark .card {
+    background: #0b1120;
+    border-color: #1f2937;
+  }
+
+  body.dark .alert {
+    color: #e5e7eb;
+    border-color: #1f2937;
+  }
+
+  body.dark .alert.alert-success {
+    background: #0f172a;
+  }
+
+  body.dark .alert.alert-info {
+    background: #0b1224;
+  }
+
+  /* Flash modal dark mode */
+  body.dark .flash-overlay {
+    background: rgba(0,0,0,0.6);
+  }
+
+  body.dark .flash-modal {
+    background: #020617;
+    color: #e5e7eb;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  body.dark .flash-modal button {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+  }
+</style>
+
+<div class="page">
+  {% if not current_user.has_active_subscription %}
+    <div
+      class="billing-trial-banner"
+      style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; background: #eff6ff; color: #1e3a8a; font-size: 0.9rem;"
+    >
+      <strong>Start your free trial to access Pro features.</strong>
+      <span style="display:block; margin-top: 0.25rem;">
+        Unlock the dashboard, setup tools, contact requests, and live TheoChat widget by starting your 7-day free trial.
+      </span>
+    </div>
+  {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=True, category_filter=["locked"]) %}
+    {% if messages %}
+      <div
+        class="flash-overlay"
+        style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 9999;"
+      >
+        <div
+          class="flash-modal"
+          style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 0.75rem; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.25); font-size: 0.95rem;"
+        >
+          {% for category, message in messages %}
+            <div style="margin-bottom: 0.75rem; color: #111827;">
+              {% if category == 'locked' %}
+                <strong>Pro feature locked</strong><br>
+                {{ message }}
+              {% else %}
+                {{ message }}
+              {% endif %}
+            </div>
+          {% endfor %}
+          <button
+            type="button"
+            id="flash-modal-close"
+            style="margin-top: 0.25rem; padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: none; background: #2563eb; color: #ffffff; cursor: pointer; font-size: 0.85rem;"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+      <script>
+        (function() {
+          const closeBtn = document.getElementById("flash-modal-close");
+          const overlay = document.querySelector(".flash-overlay");
+          if (closeBtn && overlay) {
+            closeBtn.addEventListener("click", function() {
+              overlay.parentNode.removeChild(overlay);
+            });
+          }
+        })();
+      </script>
+    {% endif %}
+  {% endwith %}
+
+  {% if current_user.has_active_subscription and subscription_info %}
+    {% if current_user.trial_status == "On trial" %}
+      <div class="alert alert-success" style="margin-bottom: 1rem;">
+        {% if subscription_info.current_period_end_date %}
+          Your <strong>7-day free trial</strong> is active and will end on <strong>{{ subscription_info.current_period_end_date }}</strong>.
+        {% else %}
+          Your <strong>7-day free trial</strong> is active.
+        {% endif %}
+        After your trial, you'll be charged <strong>&pound;19 per month</strong> unless you cancel before the trial ends.
+      </div>
+    {% else %}
+      <div class="alert alert-success" style="margin-bottom: 1rem;">
+        Your subscription will continue renewing at the end of each billing period.
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {% if not current_user.has_active_subscription %}
+    <div
+      class="plan-summary"
+      style="margin-bottom: 1.5rem; padding: 1rem 1.25rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #f9fafb;"
+    >
+      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 0.25rem;">
+        TheoChat Pro
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.25rem;">
+        <span style="font-size: 1.8rem; font-weight: 700; color: #111827;">&pound;19</span>
+        <span style="font-size: 0.95rem; color: #4b5563;">per month</span>
+      </div>
+      <div style="font-size: 0.95rem; color: #111827; margin-bottom: 0.25rem;">
+        7-day free trial of TheoChat Pro, then &pound;19/month.
+      </div>
+      <div style="font-size: 0.85rem; color: #4b5563;">
+        Cancel any time during your 7-day free trial on this billing page and you <strong>will not be charged</strong>.
+      </div>
+    </div>
+  {% else %}
+    <div
+      class="plan-summary"
+      style="margin-bottom: 1.5rem; padding: 1rem 1.25rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #f9fafb;"
+    >
+      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 0.25rem;">
+        TheoChat Pro
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.25rem;">
+        <span style="font-size: 1.8rem; font-weight: 700; color: #111827;">&pound;19</span>
+        <span style="font-size: 0.95rem; color: #4b5563;">per month</span>
+      </div>
+      {% if subscription_info and subscription_info.status == "trialing" %}
+        <div style="font-size: 0.95rem; color: #111827; margin-bottom: 0.25rem;">
+      You're on the <strong>TheoChat Pro 7-day free trial</strong>.
+          {% if subscription_info.current_period_end_date %}
+            Your trial ends on <strong>{{ subscription_info.current_period_end_date }}</strong>.
+          {% endif %}
+          After your trial, you'll be charged <strong>&pound;19/month</strong> unless you cancel before it ends.
+        </div>
+        {% if subscription_info.current_period_end_date %}
+          <p style="font-size: 0.9rem; color: #9ca3af; margin-top: 0.25rem;">
+            You have full access to all Pro features until <strong>{{ subscription_info.current_period_end_date }}</strong>. Cancel before then and you won't be charged.
+          </p>
+        {% endif %}
+      {% else %}
+        <div style="font-size: 0.95rem; color: #111827; margin-bottom: 0.25rem;">
+          You're on TheoChat Pro at &pound;19/month{% if subscription_info and subscription_info.current_period_end_date %}, next billing date {{ subscription_info.current_period_end_date }}{% endif %}.
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="billing-header-row">
+    <div>
+      <h2 style="margin:0 0 0.25rem;">Billing</h2>
+      <p style="margin:0;color:#6b7280;">Manage your TheoChat subscription.</p>
+    </div>
+    <div class="status-pill">
+      {% if trial_status == "Subscribed" %}
+        Active
+      {% elif trial_status == "On trial" %}
+        On trial
+      {% else %}
+        Free / not subscribed
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not stripe_configured %}
+    <div class="card">
+      <p style="margin:0;">Stripe is not configured. Please contact support.</p>
+    </div>
+  {% else %}
+    {% if current_user.has_active_subscription %}
+      <div
+        class="subscription-panel"
+        style="margin-top: 0.5rem; padding: 1rem 1.25rem; border-radius: 0.75rem;"
+      >
+        <h3 style="font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem;">Your subscription</h3>
+
+        {% if subscription_info %}
+          <p style="font-size: 0.9rem; margin: 0 0 0.35rem;">
+            Status: <strong>{{ subscription_info.status|default('unknown') }}</strong>
+          </p>
+          {% if subscription_info.current_period_end_date %}
+            <p style="font-size: 0.9rem; margin: 0 0 0.35rem;">
+              Current period ends on: <strong>{{ subscription_info.current_period_end_date }}</strong>
+            </p>
+          {% endif %}
+          {% if subscription_info.cancel_at_period_end %}
+            <p style="font-size: 0.9rem; margin: 0 0 0.5rem; color: #b45309;">
+              Your subscription is set to cancel at the end of this period. You'll keep access until then.
+              {% if current_user.trial_status == "On trial" %}
+                If this period is your free trial, you will not be charged.
+              {% endif %}
+            </p>
+            <form method="POST" action="{{ url_for('reinstate_subscription') }}" style="display:inline-block; margin-right:0.5rem;">
+              <button type="submit" class="primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                Keep subscription
+              </button>
+            </form>
+          {% else %}
+            <p style="font-size: 0.9rem; margin: 0 0 0.5rem;">
+              If you cancel, your access will continue until the end of the current period.
+              {% if current_user.trial_status == "On trial" %}
+                Because you're in your free trial, you won't be charged if you cancel before it ends.
+              {% endif %}
+            </p>
+          {% endif %}
+        {% else %}
+          <p style="font-size: 0.9rem; margin: 0 0 0.5rem;">
+            Your subscription is active or on trial.
+          </p>
+        {% endif %}
+
+        {% if stripe_configured and current_user.stripe_subscription_id %}
+          <form method="POST" action="{{ url_for('cancel_subscription') }}" style="display:inline-block; margin-top:0.25rem;">
+            <button type="submit" class="danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              Cancel subscription
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="card" style="max-width:520px;">
+        <h3 style="margin:0 0 0.35rem;">TheoChat Pro</h3>
+        <p style="margin:0 0 0.5rem;color:#6b7280;">Use TheoChat on one website with your own content.</p>
+        <p style="margin:0 0 0.9rem;font-weight:700;font-size:1.05rem;">Monthly subscription</p>
+        <div class="alert alert-info" style="margin-bottom: 1rem;">
+          <strong>7-day free trial:</strong> You can cancel any time during your 7-day trial on this billing page and you will not be charged.
+        </div>
+        <form method="POST" action="{{ url_for('create_checkout_session') }}" style="margin:0 0 0.5rem;">
+          <button type="submit" class="primary">Start 7-day free trial</button>
+        </form>
+        <p style="margin:0;font-size:0.9rem;color:#6b7280;">Payments are processed by Stripe. You can cancel any time.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
 {% endblock %}

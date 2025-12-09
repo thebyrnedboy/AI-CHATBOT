@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Knowledge sources</h2>
+<p>These are the documents and imports that feed your TheoChat assistant.</p>
+
+{% if items %}
+  <table class="table" style="width:100%;border-collapse:collapse;margin-top:0.75rem;">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid var(--border);">
+        <th style="padding:0.5rem 0.25rem;">Label</th>
+        <th style="padding:0.5rem 0.25rem;">Filename</th>
+        <th style="padding:0.5rem 0.25rem;">Chunks</th>
+        <th style="padding:0.5rem 0.25rem;">Uploaded</th>
+        <th style="padding:0.5rem 0.25rem;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in items %}
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:0.5rem 0.25rem;">{{ row["label"] }}</td>
+          <td style="padding:0.5rem 0.25rem;">{{ row["filename"] }}</td>
+          <td style="padding:0.5rem 0.25rem;">{{ row["chunk_count"] }}</td>
+          <td style="padding:0.5rem 0.25rem;">{{ row["first_uploaded"] }}</td>
+          <td style="padding:0.5rem 0.25rem;">
+            <form method="POST" action="{{ url_for('knowledge_delete') }}" onsubmit="return confirm('Delete this knowledge source?');" style="margin:0;">
+              <input type="hidden" name="filename" value="{{ row['filename'] }}">
+              <button type="submit" class="danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No knowledge uploaded yet.</p>
+{% endif %}
+
+{% endblock %}
