@@ -65,6 +65,22 @@ def test_chat_stream_guard():
     assert res.status_code in (401, 403, 500), "chat_stream should guard missing auth"
 
 
+def test_marketing_page_has_brand():
+    client = _client()
+    res = client.get("/marketing")
+    assert res.status_code == 200
+    body = res.get_data(as_text=True)
+    assert "TheoChat" in body
+
+
+def test_dashboard_redirects_when_unauthenticated():
+    client = _client()
+    res = client.get("/dashboard", follow_redirects=False)
+    assert res.status_code in (302, 401)
+    location = res.headers.get("Location", "")
+    assert "/login" in location
+
+
 def main():
     client = _client()
     run_health(client)

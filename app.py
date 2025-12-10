@@ -74,6 +74,11 @@ SMTP_USE_TLS = (os.getenv("SMTP_USE_TLS") or "true").strip().lower() == "true"
 SMTP_FROM_EMAIL = (os.getenv("SMTP_FROM_EMAIL") or SMTP_USERNAME or "no-reply@example.com").strip()
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TheoChat")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+DEBUG_LOGS = bool(os.getenv("DEBUG_LOGS", ""))
+PRODUCTION_MODE = os.getenv("FLASK_ENV", "").lower() == "production" or bool(os.getenv("RAILWAY_ENVIRONMENT"))
+
+if PRODUCTION_MODE and (SECRET_KEY == "dev-secret-key" or ADMIN_PASSWORD == "changeme"):
+    raise RuntimeError("Insecure default SECRET_KEY/ADMIN_PASSWORD in production. Set proper values in environment.")
 
 if os.getenv("RAILWAY_ENVIRONMENT"):
     print(
@@ -294,7 +299,6 @@ def init_db():
         )
         """
     )
-    ensure_column(c, "contact_requests", "visitor_phone", "TEXT")
 
     c.execute("SELECT id FROM businesses WHERE name = ?", (DEFAULT_BUSINESS_NAME,))
     row = c.fetchone()
@@ -766,6 +770,7 @@ def send_email(to_email: str, subject: str, plain_body: str, html_body: Optional
     Best-effort Brevo email sender supporting HTML with plain text fallback.
     """
     if not (BREVO_API_KEY and SMTP_FROM_EMAIL and to_email):
+        print("send_email: email configuration missing or invalid; cannot send email.")
         return False
 
     headers = {
@@ -1044,6 +1049,7 @@ def forgot_password_post():
     row = c.fetchone()
 
     if row:
+        send_success = None
         try:
             token = secrets.token_urlsafe(48)
             expiry = datetime.now(UTC) + timedelta(hours=1)
@@ -1072,11 +1078,13 @@ def forgot_password_post():
             </html>
             """
             try:
-                send_email(row["email"], subject, plain_body, html_body)
+                send_success = send_email(row["email"], subject, plain_body, html_body)
             except Exception as e:
                 print("Password reset email error:", e)
         except Exception as e:
             print("Password reset token error:", e)
+        if send_success is False:
+            flash("We couldn't send the email. Please try again later or contact support if the issue persists.", "error")
     conn.close()
 
     flash(generic_msg, "success")
@@ -1606,7 +1614,8 @@ def chat_stream():
             bump_usage(user_id, business_id, today, "messages", 1)
         except Exception as e:
             # Log the error server-side while still surfacing a simple marker to the client.
-            print("Error in chat_stream.generate:", repr(e))
+            if DEBUG_LOGS:
+                print("Error in chat_stream.generate:", repr(e))
             yield f"\n\n[error] {str(e)}"
 
     return add_cors(Response(stream_with_context(generate()), mimetype="text/plain"))
@@ -1645,7 +1654,8 @@ def widget_contact():
                 except Exception:
                     host = ""
         if not host:
-            print("widget_contact: missing Referer/Origin, cannot enforce allowlist")
+            if DEBUG_LOGS:
+                print("widget_contact: missing Referer/Origin, cannot enforce allowlist")
             return add_cors(
                 Response(
                     "Error: Could not determine requesting site (missing or invalid Referer/Origin).",
@@ -2585,6 +2595,3 @@ if __name__ == "__main__":
 - Complex business settings UI/routes and RAG fallback alerts
 These are intentionally removed from the mvp-core branch. Restore from main as needed.
 """
-
-
-
