@@ -75,6 +75,12 @@ SMTP_FROM_EMAIL = (os.getenv("SMTP_FROM_EMAIL") or SMTP_USERNAME or "no-reply@ex
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TheoChat")
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 
+if os.getenv("RAILWAY_ENVIRONMENT"):
+    print(
+        "Warning: uploads directory is on ephemeral storage; original uploaded files may be lost on redeploy. "
+        "Ensure important data is persisted in the database."
+    )
+
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
 
@@ -585,6 +591,7 @@ def parse_allowed_domains(raw: str) -> List[str]:
     """
     Parse a comma-separated allowed_domains string into normalized hostnames.
     Supports entries like 'example.com', 'https://example.com', etc.
+    Missing Referer/Origin will be handled by callers; this function only parses stored domains.
     """
     if not raw:
         return []
@@ -1443,6 +1450,18 @@ def import_site():
 
     total_chunks = get_chunk_count(int(current_user.id), int(current_user.business_id))
 
+    # Persist the last imported URL for this business after successful import
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute(
+            "UPDATE businesses SET last_import_url = ? WHERE id = ?",
+            (url, int(current_user.business_id)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
     flash("Website content import completed. It may take a moment for all content to be available.", "success")
     return redirect(url_for("knowledge"))
 # ==========================
@@ -1619,9 +1638,17 @@ def widget_contact():
     if allowed:
         host = get_request_host_from_referer()
         if not host:
+            origin = request.headers.get("Origin", "")
+            if origin:
+                try:
+                    host = normalize_host(urlparse(origin).netloc)
+                except Exception:
+                    host = ""
+        if not host:
+            print("widget_contact: missing Referer/Origin, cannot enforce allowlist")
             return add_cors(
                 Response(
-                    "Error: Domain not allowed for this API key (missing or invalid Referer).",
+                    "Error: Could not determine requesting site (missing or invalid Referer/Origin).",
                     status=403,
                     mimetype="text/plain",
                 )
@@ -2301,8 +2328,8 @@ def create_checkout_session():
 
     except Exception as e:
         conn.close()
-        print("Stripe error:", e)
-        flash("Could not create Stripe checkout session.", "error")
+        print(f"Stripe checkout error: {e!r}")
+        flash("We couldn’t start your subscription. Please try again in a moment or contact support@theochat.co.uk.", "error")
         return redirect(url_for("billing"))
 
 
@@ -2408,105 +2435,109 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError:
         return "Invalid signature", 400
 
-    event_type = event.get("type")
+    try:
+        event_type = event.get("type")
 
-    if event_type == "checkout.session.completed":
-        session = event["data"]["object"]
-        user_id = session.get("metadata", {}).get("user_id")
-        subscription_id = session.get("subscription")
-        customer_id = session.get("customer")
+        if event_type == "checkout.session.completed":
+            session = event["data"]["object"]
+            user_id = session.get("metadata", {}).get("user_id")
+            subscription_id = session.get("subscription")
+            customer_id = session.get("customer")
 
-        if user_id and subscription_id:
-            try:
-                # Fetch the subscription so we get the real status (e.g. "trialing")
-                sub = stripe.Subscription.retrieve(subscription_id)
-                status = sub.get("status", "active")
-            except Exception:
-                # Fallback if Stripe retrieval fails for some reason
-                status = "active"
+            if user_id and subscription_id:
+                try:
+                    # Fetch the subscription so we get the real status (e.g. "trialing")
+                    sub = stripe.Subscription.retrieve(subscription_id)
+                    status = sub.get("status", "active")
+                except Exception:
+                    # Fallback if Stripe retrieval fails for some reason
+                    status = "active"
 
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute(
-                "SELECT stripe_subscription_status, email FROM users WHERE id = ?",
-                (int(user_id),),
-            )
-            prev_row = c.fetchone()
-            prev_status = prev_row["stripe_subscription_status"] if prev_row else None
-            user_email = prev_row["email"] if prev_row else None
-            c.execute(
-                """
-                UPDATE users
-                SET stripe_subscription_id = ?, stripe_customer_id = ?, stripe_subscription_status = ?
-                WHERE id = ?
-                """,
-                (subscription_id, customer_id, status, int(user_id)),
-            )
-            conn.commit()
-            conn.close()
-
-            try:
-                is_new_activation = (status in ("active", "trialing")) and (
-                    prev_status not in ("active", "trialing")
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute(
+                    "SELECT stripe_subscription_status, email FROM users WHERE id = ?",
+                    (int(user_id),),
                 )
-                if is_new_activation and user_email:
-                    dashboard_url = url_for("index", _external=True)
-                    subject = "Welcome to TheoChat!"
-                    plain_body = (
-                        "Welcome to TheoChat!\n\n"
-                        "Your subscription is now active. Visit your dashboard to start using your TheoChat assistant:\n"
-                        f"{dashboard_url}\n\n"
-                        "Theo can answer visitor questions, capture leads, and represent your business 24/7.\n\n"
-                        "Thanks for choosing TheoChat!"
-                    )
-                    html_body = f"""
-                    <html>
-                      <body style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background:#f9fafb; padding:16px;">
-                        <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:16px;">
-                          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-                            <img src="{url_for('static', filename='img/theochat-logo-mark.png', _external=True)}" alt="TheoChat" style="height:24px;width:24px;border-radius:999px;object-fit:cover;" />
-                            <span style="font-weight:600;font-size:16px;">TheoChat</span>
-                          </div>
-                          <p style="margin:0 0 12px;">Welcome to TheoChat! Your subscription is now active.</p>
-                          <p style="margin:0 0 12px;">Visit your dashboard to start using Theo to assist your website visitors 24/7.</p>
-                          <p style="margin:0 0 16px;"><a href="{dashboard_url}" style="color:#2563eb;text-decoration:none;">Open dashboard</a></p>
-                          <p style="margin:0;color:#6b7280;font-size:12px;">Thanks for choosing TheoChat.</p>
-                        </div>
-                      </body>
-                    </html>
+                prev_row = c.fetchone()
+                prev_status = prev_row["stripe_subscription_status"] if prev_row else None
+                user_email = prev_row["email"] if prev_row else None
+                c.execute(
                     """
-                    send_email(user_email, subject, plain_body, html_body)
-            except Exception as e:
-                print("Welcome email error:", e)
+                    UPDATE users
+                    SET stripe_subscription_id = ?, stripe_customer_id = ?, stripe_subscription_status = ?
+                    WHERE id = ?
+                    """,
+                    (subscription_id, customer_id, status, int(user_id)),
+                )
+                conn.commit()
+                conn.close()
 
-    elif event_type == "customer.subscription.updated":
-        sub = event["data"]["object"]
-        subscription_id = sub.get("id")
-        status = sub.get("status")
+                try:
+                    is_new_activation = (status in ("active", "trialing")) and (
+                        prev_status not in ("active", "trialing")
+                    )
+                    if is_new_activation and user_email:
+                        dashboard_url = url_for("index", _external=True)
+                        subject = "Welcome to TheoChat!"
+                        plain_body = (
+                            "Welcome to TheoChat!\n\n"
+                            "Your subscription is now active. Visit your dashboard to start using your TheoChat assistant:\n"
+                            f"{dashboard_url}\n\n"
+                            "Theo can answer visitor questions, capture leads, and represent your business 24/7.\n\n"
+                            "Thanks for choosing TheoChat!"
+                        )
+                        html_body = f"""
+                        <html>
+                          <body style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background:#f9fafb; padding:16px;">
+                            <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:16px;">
+                              <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                                <img src="{url_for('static', filename='img/theochat-logo-mark.png', _external=True)}" alt="TheoChat" style="height:24px;width:24px;border-radius:999px;object-fit:cover;" />
+                                <span style="font-weight:600;font-size:16px;">TheoChat</span>
+                              </div>
+                              <p style="margin:0 0 12px;">Welcome to TheoChat! Your subscription is now active.</p>
+                              <p style="margin:0 0 12px;">Visit your dashboard to start using Theo to assist your website visitors 24/7.</p>
+                              <p style="margin:0 0 16px;"><a href="{dashboard_url}" style="color:#2563eb;text-decoration:none;">Open dashboard</a></p>
+                              <p style="margin:0;color:#6b7280;font-size:12px;">Thanks for choosing TheoChat.</p>
+                            </div>
+                          </body>
+                        </html>
+                        """
+                        send_email(user_email, subject, plain_body, html_body)
+                except Exception as e:
+                    print("Welcome email error:", e)
 
-        if subscription_id:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute(
-                "UPDATE users SET stripe_subscription_status = ? WHERE stripe_subscription_id = ?",
-                (status, subscription_id),
-            )
-            conn.commit()
-            conn.close()
+        elif event_type == "customer.subscription.updated":
+            sub = event["data"]["object"]
+            subscription_id = sub.get("id")
+            status = sub.get("status")
 
-    elif event_type == "customer.subscription.deleted":
-        sub = event["data"]["object"]
-        subscription_id = sub.get("id")
+            if subscription_id:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute(
+                    "UPDATE users SET stripe_subscription_status = ? WHERE stripe_subscription_id = ?",
+                    (status, subscription_id),
+                )
+                conn.commit()
+                conn.close()
 
-        if subscription_id:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute(
-                "UPDATE users SET stripe_subscription_status = ? WHERE stripe_subscription_id = ?",
-                ("canceled", subscription_id),
-            )
-            conn.commit()
-            conn.close()
+        elif event_type == "customer.subscription.deleted":
+            sub = event["data"]["object"]
+            subscription_id = sub.get("id")
+
+            if subscription_id:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute(
+                    "UPDATE users SET stripe_subscription_status = ? WHERE stripe_subscription_id = ?",
+                    ("canceled", subscription_id),
+                )
+                conn.commit()
+                conn.close()
+    except Exception as e:
+        print(f"Stripe webhook internal error: {e!r}")
+        return "OK", 200
 
     return "OK", 200
 
