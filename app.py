@@ -127,15 +127,31 @@ def get_business_by_api_key(api_key: str):
 def get_business_for_user(user_id: int):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute(
-        """
-        SELECT b.id, b.name, b.api_key, b.allowed_domains, b.contact_enabled, b.contact_email, b.last_import_url
-        FROM businesses b
-        JOIN users u ON b.id = u.business_id
-        WHERE u.id = ?
-        """,
-        (user_id,),
-    )
+    try:
+        c.execute(
+            """
+            SELECT b.id, b.name, b.api_key, b.allowed_domains, b.contact_enabled, b.contact_email, b.last_import_url
+            FROM businesses b
+            JOIN users u ON b.id = u.business_id
+            WHERE u.id = ?
+            """,
+            (user_id,),
+        )
+    except sqlite3.OperationalError as e:
+        msg = str(e).lower()
+        if "last_import_url" in msg:
+            c.execute(
+                """
+                SELECT b.id, b.name, b.api_key, b.allowed_domains, b.contact_enabled, b.contact_email
+                FROM businesses b
+                JOIN users u ON b.id = u.business_id
+                WHERE u.id = ?
+                """,
+                (user_id,),
+            )
+        else:
+            conn.close()
+            raise
     row = c.fetchone()
     conn.close()
     return row
@@ -242,6 +258,7 @@ def init_db():
     ensure_column(c, "businesses", "allowed_domains", "TEXT")
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
+    ensure_column(c, "businesses", "last_import_url", "TEXT")
 
     c.execute(
         """
