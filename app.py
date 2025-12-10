@@ -1671,7 +1671,7 @@ def widget_contact():
 def embed_js():
     js = r"""
 (function() {
-  const scriptEl = document.currentScript;
+  const scriptEl = document.currentScript || document.querySelector('script[data-api-key]');
 
   function getApiKeyFromScript(el) {
     if (!el) return null;
@@ -1698,15 +1698,19 @@ def embed_js():
     console.error("[TheoChat] API key missing. Add data-api-key to the script tag or ?api_key=... in the src.");
     return;
   }
-  const explicitBase = scriptEl && scriptEl.getAttribute("data-base-url");
-  const scriptSrcBase = (scriptEl && scriptEl.src) ? new URL(scriptEl.src, window.location.href).origin : null;
+  const baseUrl =
+    (scriptEl && scriptEl.getAttribute("data-base-url")) ||
+    (scriptEl ? new URL(scriptEl.src, window.location.href).origin : "");
   const globalBase = window.__CHATBOT_BASE_URL;
-  const BASE_URL = (explicitBase || scriptSrcBase || globalBase);
+  const BASE_URL = (baseUrl || globalBase);
   if (!BASE_URL) {
     console.error("[TheoChat] BASE_URL not set. Add data-base-url to the script tag or set window.__CHATBOT_BASE_URL.");
     return;
   }
   const ENDPOINT = BASE_URL.replace(/\/$/, "") + "/chat_stream?api_key=" + encodeURIComponent(API_KEY);
+  const logoUrl = baseUrl
+    ? `${baseUrl.replace(/\/+$/, "")}/static/img/theochat-logo-mark.png`
+    : "/static/img/theochat-logo-mark.png";
 
   const btn = document.createElement("button");
   const defaultLabel = "Chat with us";
@@ -1809,7 +1813,7 @@ def embed_js():
   header.style.padding = "10px 12px";
   header.style.borderBottom = "1px solid #e5e7eb";
   const headerAvatar = document.createElement("img");
-  headerAvatar.src = "/static/img/theochat-logo-mark.png";
+  headerAvatar.src = logoUrl;
   headerAvatar.alt = "TheoChat";
   headerAvatar.style.width = "20px";
   headerAvatar.style.height = "20px";
