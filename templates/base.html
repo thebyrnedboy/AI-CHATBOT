@@ -495,7 +495,7 @@
       <h1 class="site-logo">
         <a
           class="logo-link navbar-brand"
-          href="{% if current_user.is_authenticated %}{{ url_for('index') }}{% else %}{{ url_for('marketing') }}{% endif %}"
+          href="{% if current_user.is_authenticated %}{{ url_for('dashboard') }}{% else %}{{ url_for('index') }}{% endif %}"
         >
           <img
             src="{{ url_for('static', filename='img/theochat-logo-full.png') }}"
@@ -541,14 +541,14 @@
     </header>
     <nav class="main-tabs">
       {% if current_user.is_authenticated %}
-        <a href="{{ url_for('index') }}" class="tab-link{% if request.endpoint in ['index'] %} tab-link-active{% endif %}">Home</a>
+        <a href="{{ url_for('dashboard') }}" class="tab-link{% if request.endpoint in ['dashboard'] %} tab-link-active{% endif %}">Home</a>
         <a href="{{ url_for('contact_requests') }}" class="tab-link{% if request.endpoint in ['contact_requests'] %} tab-link-active{% endif %}">Contact requests</a>
         <a href="{{ url_for('setup') }}" class="tab-link{% if request.endpoint in ['setup'] %} tab-link-active{% endif %}">Setup</a>
         <a href="{{ url_for('billing') }}" class="tab-link{% if request.endpoint in ['billing'] %} tab-link-active{% endif %}">Billing</a>
       {% else %}
-        <a href="{{ url_for('marketing') }}" class="tab-link{% if request.endpoint in ['marketing'] %} tab-link-active{% endif %}">Home</a>
+        <a href="{{ url_for('index') }}" class="tab-link{% if request.endpoint in ['index', 'marketing'] %} tab-link-active{% endif %}">Home</a>
         <a href="{{ url_for('login') }}" class="tab-link{% if request.endpoint in ['login'] %} tab-link-active{% endif %}">Login</a>
-        <a href="{{ url_for('register') }}" class="tab-link{% if request.endpoint in ['register'] %} tab-link-active{% endif %}">Register</a>
+        <a href="{{ url_for('register') }}" class="tab-link{% if request.endpoint in ['register'] %} tab-link-active{% endif %}">Start free trial</a>
       {% endif %}
     </nav>
 

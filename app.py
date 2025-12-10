@@ -1201,9 +1201,15 @@ def logout():
 # Main pages
 # ==========================
 @app.get("/")
+def index():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+    return render_template("marketing.html")
+
+
 @app.get("/dashboard")
 @subscription_required
-def index():
+def dashboard():
     today = time.strftime("%Y-%m-%d")
     user_id = int(current_user.id)
     biz_id = int(current_user.business_id)
@@ -1381,10 +1387,9 @@ def health():
 
 @app.get("/marketing")
 def marketing():
-    from flask_login import current_user
     try:
         if current_user.is_authenticated:
-            return redirect(url_for("index"))
+            return redirect(url_for("dashboard"))
     except Exception:
         pass
     return render_template("marketing.html")
