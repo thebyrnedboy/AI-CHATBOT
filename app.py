@@ -1381,25 +1381,30 @@ def upload():
 @app.post("/import_site")
 @subscription_required
 def import_site():
-    url = (request.form.get("url") or "").strip()
+    url = (request.form.get("website_url") or request.form.get("url") or "").strip()
     if not url or not url.startswith(("http://", "https://")):
-        return jsonify({"error": "Provide a full URL starting with http:// or https://"}), 400
+        flash("Provide a full URL starting with http:// or https://", "error")
+        return redirect(url_for("knowledge"))
     try:
         parsed = urlparse(url)
         if not parsed.netloc:
-            return jsonify({"error": "Invalid URL"}), 400
+            flash("Invalid URL. Please check the address and try again.", "error")
+            return redirect(url_for("knowledge"))
     except Exception:
-        return jsonify({"error": "Invalid URL"}), 400
+        flash("Invalid URL. Please check the address and try again.", "error")
+        return redirect(url_for("knowledge"))
 
     base_origin = f"{parsed.scheme}://{parsed.netloc}"
     text, _, err = fetch_page_text(url, base_origin, max_chars=15000)
     if err or not text:
-        return jsonify({"error": err or "No readable text found"}), 400
+        flash(err or "No readable text found. Please check the website and try again.", "error")
+        return redirect(url_for("knowledge"))
 
     chunks = chunk_text(text, max_chars=500)
     existing = get_chunk_count(int(current_user.id), int(current_user.business_id))
     if existing + len(chunks) > MAX_CHUNKS:
-        return jsonify({"error": "Storage limit reached. Remove files to add more."}), 400
+        flash("Storage limit reached. Remove files to add more.", "error")
+        return redirect(url_for("knowledge"))
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -1417,7 +1422,8 @@ def import_site():
 
     total_chunks = get_chunk_count(int(current_user.id), int(current_user.business_id))
 
-    return jsonify({"ok": True, "num_chunks": len(chunks), "preview": text[:400], "total_chunks": total_chunks})
+    flash("Website content import completed. It may take a moment for all content to be available.", "success")
+    return redirect(url_for("knowledge"))
 # ==========================
 # Chat
 # ==========================

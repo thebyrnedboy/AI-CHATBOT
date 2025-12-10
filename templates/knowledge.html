@@ -36,4 +36,21 @@
   <p>No knowledge uploaded yet.</p>
 {% endif %}
 
+<div style="margin-top:1.5rem;">
+  <h3 style="margin:0 0 0.35rem;">Import content from your website</h3>
+  <p style="margin:0 0 0.75rem;color:var(--muted);">
+    Paste your main website URL and TheoChat will crawl your site and import content to use in responses.
+  </p>
+  <form action="{{ url_for('import_site') }}" method="post" style="display:flex;flex-direction:column;gap:0.65rem;max-width:520px;">
+    <input
+      type="url"
+      name="website_url"
+      required
+      placeholder="https://yourwebsite.com"
+      style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;"
+    />
+    <button type="submit" class="primary" style="align-self:flex-start;padding:0.5rem 1rem;border-radius:6px;">Import website</button>
+  </form>
+</div>
+
 {% endblock %}
