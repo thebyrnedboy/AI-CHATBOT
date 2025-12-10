@@ -408,16 +408,14 @@
       cursor: pointer;
       opacity: 0.7;
       color: var(--primary);
-      transition: transform 0.15s ease, opacity 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+      transition: opacity 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .password-wrapper .password-eye:hover {
       opacity: 0.95;
-      transform: scale(1.05);
     }
 
     .password-wrapper .password-eye.password-eye--active {
-      transform: scale(1.1);
       opacity: 1;
       box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06);
     }
