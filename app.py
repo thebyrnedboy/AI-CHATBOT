@@ -143,7 +143,13 @@ def ensure_column(cursor, table: str, column: str, definition: str):
     cursor.execute(f"PRAGMA table_info({table})")
     cols = [row[1] for row in cursor.fetchall()]
     if column not in cols:
-        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        try:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        except sqlite3.OperationalError as e:
+            msg = str(e).lower()
+            if "no such table" in msg or "duplicate column name" in msg:
+                return
+            raise
 
 
 def generate_api_key() -> str:
@@ -234,7 +240,6 @@ def init_db():
     ensure_column(c, "businesses", "allowed_domains", "TEXT")
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
-    ensure_column(c, "contact_requests", "visitor_phone", "TEXT")
 
     c.execute(
         """
@@ -243,12 +248,14 @@ def init_db():
             business_id INTEGER NOT NULL,
             source TEXT,
             visitor_name TEXT,
-            visitor_email TEXT,
+            visitor_email TEXT NOT NULL,
             message TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            answered INTEGER DEFAULT 0
         )
         """
     )
+    ensure_column(c, "contact_requests", "visitor_phone", "TEXT")
 
     c.execute("SELECT id FROM businesses WHERE name = ?", (DEFAULT_BUSINESS_NAME,))
     row = c.fetchone()
