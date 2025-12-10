@@ -13,7 +13,10 @@
           </label>
           <label style="display:block;margin-bottom:0.85rem;font-size:0.95rem;">
             <span style="display:block;margin-bottom:0.35rem;">Password</span>
-            <input type="password" name="password" required autocomplete="current-password" style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"/>
+            <div class="password-wrapper">
+              <input type="password" name="password" required autocomplete="current-password" style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"/>
+              <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye" alt="Show password">
+            </div>
           </label>
           <div style="text-align:center;">
             <button class="primary" type="submit" style="padding:0.5rem 1rem;border-radius:6px;background:#2563eb;color:#fff;border:1px solid #2563eb;display:inline-block;">Log in</button>
