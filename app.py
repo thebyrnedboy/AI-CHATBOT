@@ -259,6 +259,15 @@ def init_db():
         """
     )
 
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS stripe_events (
+            id TEXT PRIMARY KEY,
+            created_at TEXT
+        )
+        """
+    )
+
     ensure_column(c, "users", "business_id", "INTEGER")
     ensure_column(c, "users", "plan", "TEXT DEFAULT 'starter'")
     ensure_column(c, "users", "stripe_customer_id", "TEXT")
@@ -266,6 +275,8 @@ def init_db():
     ensure_column(c, "messages", "business_id", "INTEGER")
     ensure_column(c, "document_chunks", "business_id", "INTEGER")
     ensure_column(c, "document_chunks", "label", "TEXT")
+    ensure_column(c, "document_chunks", "source_type", "TEXT")
+    ensure_column(c, "document_chunks", "source_url", "TEXT")
     ensure_column(c, "businesses", "allowed_domains", "TEXT")
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
@@ -512,13 +523,24 @@ def get_chunk_count(user_id: int, business_id: int) -> int:
     return row["cnt"] if row else 0
 
 
-def store_document_chunks(user_id: int, business_id: int, filename: str, chunks: List[str], label: Optional[str] = None) -> None:
+def store_document_chunks(
+    user_id: int,
+    business_id: int,
+    filename: str,
+    chunks: List[str],
+    label: Optional[str] = None,
+    source_type: Optional[str] = None,
+    source_url: Optional[str] = None,
+) -> None:
     conn = get_db_connection()
     c = conn.cursor()
     for idx, ch in enumerate(chunks):
         c.execute(
-            "INSERT INTO document_chunks (user_id, business_id, filename, chunk_index, text, label) VALUES (?,?,?,?,?,?)",
-            (user_id, business_id, filename, idx, ch, label),
+            """
+            INSERT INTO document_chunks (user_id, business_id, filename, chunk_index, text, label, source_type, source_url)
+            VALUES (?,?,?,?,?,?,?,?)
+            """,
+            (user_id, business_id, filename, idx, ch, label, source_type, source_url),
         )
     conn.commit()
     conn.close()
@@ -1443,8 +1465,8 @@ def import_site():
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
-        "DELETE FROM document_chunks WHERE user_id = ? AND business_id = ? AND filename = ?",
-        (user_id, biz_id, "website_import"),
+        "DELETE FROM document_chunks WHERE business_id = ? AND (source_type = ? OR filename = ?)",
+        (biz_id, "website", "website_import"),
     )
     conn.commit()
     conn.close()
@@ -1455,7 +1477,15 @@ def import_site():
         flash("Storage limit reached. Remove files to add more.", "error")
         return redirect(url_for("knowledge"))
 
-    store_document_chunks(user_id, biz_id, "website_import", chunks, "Website import")
+    store_document_chunks(
+        user_id,
+        biz_id,
+        "website_import",
+        chunks,
+        "Website import",
+        source_type="website",
+        source_url=url,
+    )
 
     today = time.strftime("%Y-%m-%d")
     bump_usage(int(current_user.id), int(current_user.business_id), today, "uploads", 1)
@@ -2449,8 +2479,24 @@ def stripe_webhook():
     except stripe.error.SignatureVerificationError:
         return "Invalid signature", 400
 
+    event_id = event.get("id")
+    event_type = event.get("type")
+
+    if not event_id:
+        return "Invalid event", 400
+
+    # Idempotency check
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT id FROM stripe_events WHERE id = ?", (event_id,))
+    already = c.fetchone()
+    conn.close()
+    if already:
+        print(f"Stripe webhook: event {event_id} already processed; skipping.")
+        return "OK", 200
+
     try:
-        event_type = event.get("type")
+        processed = False
 
         if event_type == "checkout.session.completed":
             session = event["data"]["object"]
@@ -2520,6 +2566,7 @@ def stripe_webhook():
                         send_email(user_email, subject, plain_body, html_body)
                 except Exception as e:
                     print("Welcome email error:", e)
+                processed = True
 
         elif event_type == "customer.subscription.updated":
             sub = event["data"]["object"]
@@ -2535,6 +2582,7 @@ def stripe_webhook():
                 )
                 conn.commit()
                 conn.close()
+                processed = True
 
         elif event_type == "customer.subscription.deleted":
             sub = event["data"]["object"]
@@ -2549,8 +2597,19 @@ def stripe_webhook():
                 )
                 conn.commit()
                 conn.close()
+                processed = True
+
+        if processed:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute(
+                "INSERT OR IGNORE INTO stripe_events (id, created_at) VALUES (?, ?)",
+                (event_id, datetime.utcnow().isoformat()),
+            )
+            conn.commit()
+            conn.close()
     except Exception as e:
-        print(f"Stripe webhook internal error: {e!r}")
+        print(f"Stripe webhook internal error for event {event_id}: {e!r}")
         return "OK", 200
 
     return "OK", 200
