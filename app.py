@@ -129,7 +129,7 @@ def get_business_for_user(user_id: int):
     c = conn.cursor()
     c.execute(
         """
-        SELECT b.id, b.name, b.api_key, b.allowed_domains, b.contact_enabled, b.contact_email
+        SELECT b.id, b.name, b.api_key, b.allowed_domains, b.contact_enabled, b.contact_email, b.last_import_url
         FROM businesses b
         JOIN users u ON b.id = u.business_id
         WHERE u.id = ?
@@ -1196,6 +1196,9 @@ def index():
     allowed_domains = biz["allowed_domains"] if biz and biz["allowed_domains"] else ""
     contact_enabled = (biz["contact_enabled"] == 1) if biz and "contact_enabled" in biz.keys() else False
     contact_email = biz["contact_email"] if biz and biz["contact_email"] else ""
+    imported_website_url = (
+        biz["last_import_url"] if biz and "last_import_url" in biz.keys() and biz["last_import_url"] else ""
+    )
 
     return render_template(
         "index.html",
@@ -1210,6 +1213,7 @@ def index():
         trial_status=current_user.trial_status,
         contact_enabled=contact_enabled,
         contact_email=contact_email,
+        imported_website_url=imported_website_url,
         subscription_info=subscription_info,
         trial_days_left=trial_days_left,
         embed_available=embed_available,

@@ -425,14 +425,44 @@
         </p>
         <form action="{{ url_for('import_site') }}" method="post" style="display:flex;flex-direction:column;gap:0.65rem;max-width:520px;">
           <input
+            id="website-url-input"
             type="url"
             name="website_url"
             required
             placeholder="https://yourwebsite.com"
-            style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;"
+            value="{{ imported_website_url or '' }}"
+            {% if imported_website_url %}disabled{% endif %}
+            style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;{% if imported_website_url %}background:#f9fafb;color:#6b7280;cursor:not-allowed;{% endif %}"
           />
-          <button type="submit" class="primary" style="align-self:flex-start;padding:0.5rem 1rem;border-radius:6px;">Import website</button>
+          <button
+            id="website-import-button"
+            type="{% if imported_website_url %}button{% else %}submit{% endif %}"
+            class="primary"
+            style="align-self:flex-start;padding:0.5rem 1rem;border-radius:6px;"
+          >
+            {% if imported_website_url %}Change import{% else %}Import website{% endif %}
+          </button>
         </form>
+        {% if imported_website_url %}
+        <script>
+          (function() {
+            const urlInput = document.getElementById("website-url-input");
+            const importBtn = document.getElementById("website-import-button");
+            if (!urlInput || !importBtn) return;
+            importBtn.addEventListener("click", function(e) {
+              if (!urlInput.disabled) return;
+              e.preventDefault();
+              urlInput.disabled = false;
+              urlInput.style.background = "#fff";
+              urlInput.style.color = "#111827";
+              urlInput.style.cursor = "text";
+              importBtn.textContent = "Import website";
+              importBtn.type = "submit";
+              urlInput.focus();
+            });
+          })();
+        </script>
+        {% endif %}
       </div>
     </div>
 
