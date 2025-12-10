@@ -1464,9 +1464,15 @@ def import_site():
     # Remove existing website import chunks for this business before re-importing
     conn = get_db_connection()
     c = conn.cursor()
+    # New-style website rows (with source_type/source_url)
     c.execute(
-        "DELETE FROM document_chunks WHERE business_id = ? AND (source_type = ? OR filename = ?)",
-        (biz_id, "website", "website_import"),
+        "DELETE FROM document_chunks WHERE business_id = ? AND source_type = ?",
+        (biz_id, "website"),
+    )
+    # Legacy rows that relied only on filename
+    c.execute(
+        "DELETE FROM document_chunks WHERE business_id = ? AND filename = ?",
+        (biz_id, "website_import"),
     )
     conn.commit()
     conn.close()
@@ -2495,7 +2501,10 @@ def stripe_webhook():
         print(f"Stripe webhook: event {event_id} already processed; skipping.")
         return "OK", 200
 
+    conn = get_db_connection()
     try:
+        conn.execute("BEGIN")
+        c = conn.cursor()
         processed = False
 
         if event_type == "checkout.session.completed":
@@ -2513,8 +2522,6 @@ def stripe_webhook():
                     # Fallback if Stripe retrieval fails for some reason
                     status = "active"
 
-                conn = get_db_connection()
-                c = conn.cursor()
                 c.execute(
                     "SELECT stripe_subscription_status, email FROM users WHERE id = ?",
                     (int(user_id),),
@@ -2530,8 +2537,6 @@ def stripe_webhook():
                     """,
                     (subscription_id, customer_id, status, int(user_id)),
                 )
-                conn.commit()
-                conn.close()
 
                 try:
                     is_new_activation = (status in ("active", "trialing")) and (
@@ -2574,14 +2579,10 @@ def stripe_webhook():
             status = sub.get("status")
 
             if subscription_id:
-                conn = get_db_connection()
-                c = conn.cursor()
                 c.execute(
                     "UPDATE users SET stripe_subscription_status = ? WHERE stripe_subscription_id = ?",
                     (status, subscription_id),
                 )
-                conn.commit()
-                conn.close()
                 processed = True
 
         elif event_type == "customer.subscription.deleted":
@@ -2589,28 +2590,24 @@ def stripe_webhook():
             subscription_id = sub.get("id")
 
             if subscription_id:
-                conn = get_db_connection()
-                c = conn.cursor()
                 c.execute(
                     "UPDATE users SET stripe_subscription_status = ? WHERE stripe_subscription_id = ?",
                     ("canceled", subscription_id),
                 )
-                conn.commit()
-                conn.close()
                 processed = True
 
         if processed:
-            conn = get_db_connection()
-            c = conn.cursor()
             c.execute(
                 "INSERT OR IGNORE INTO stripe_events (id, created_at) VALUES (?, ?)",
                 (event_id, datetime.utcnow().isoformat()),
             )
-            conn.commit()
-            conn.close()
+        conn.commit()
     except Exception as e:
-        print(f"Stripe webhook internal error for event {event_id}: {e!r}")
+        conn.rollback()
+        print(f"Stripe webhook transaction error for event {event_id}: {e!r}")
         return "OK", 200
+    finally:
+        conn.close()
 
     return "OK", 200
 
