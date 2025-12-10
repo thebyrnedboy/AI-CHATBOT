@@ -1406,6 +1406,21 @@ def upload():
     original_name = file.filename or "uploaded_file"
     safe_name = secure_filename(original_name) or "uploaded_file"
     filepath = os.path.join(upload_dir, safe_name)
+
+    # Basic size check (20 MB max)
+    content_length = request.content_length or 0
+    max_bytes = 20 * 1024 * 1024
+    if content_length > max_bytes:
+        flash("File too large. Maximum size is 20 MB.", "error")
+        return redirect(url_for("knowledge"))
+
+    # Type/extension check
+    allowed_exts = {".pdf", ".docx", ".txt", ".md"}
+    ext = os.path.splitext(safe_name)[1].lower()
+    if ext not in allowed_exts:
+        flash("Unsupported file type. Please upload PDF, Word, or text documents.", "error")
+        return redirect(url_for("knowledge"))
+
     file.save(filepath)
 
     try:
@@ -1428,6 +1443,12 @@ def upload():
     conn.close()
 
     store_document_chunks(int(current_user.id), int(current_user.business_id), safe_name, chunks, label or safe_name)
+
+    # Clean up original file after processing
+    try:
+        os.remove(filepath)
+    except Exception:
+        pass
 
     today = time.strftime("%Y-%m-%d")
     bump_usage(int(current_user.id), int(current_user.business_id), today, "uploads", 1)
@@ -1575,14 +1596,24 @@ def chat_stream():
         if allowed:
             host = get_request_host_from_referer()
             if not host:
+                origin = request.headers.get("Origin", "")
+                if origin:
+                    try:
+                        host = normalize_host(urlparse(origin).netloc)
+                    except Exception:
+                        host = ""
+                if not host and DEBUG_LOGS:
+                    print("Domain allowlist: missing or invalid Referer/Origin; cannot determine host.")
                 return add_cors(
                     Response(
-                        "Error: Domain not allowed for this API key (missing or invalid Referer).",
+                        "Blocked: could not determine requesting site. Ensure your site sends a Referer or Origin header and that the domain is on your allowlist.",
                         status=403,
                         mimetype="text/plain",
                     )
                 )
             if not any(host == d or host.endswith("." + d) for d in allowed):
+                if DEBUG_LOGS:
+                    print(f"Domain allowlist: host '{host}' not in allowed domains {allowed}")
                 return add_cors(
                     Response(
                         "Error: Domain not allowed for this API key.",
