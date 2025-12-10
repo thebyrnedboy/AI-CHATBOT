@@ -4,7 +4,7 @@ import secrets
 import sqlite3
 import time
 from typing import List, Tuple, Optional, Dict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
 from functools import wraps
 import stripe
@@ -252,6 +252,20 @@ def init_db():
             message TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             answered INTEGER DEFAULT 0
+        )
+        """
+    )
+    ensure_column(c, "contact_requests", "visitor_phone", "TEXT")
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
         )
         """
     )
@@ -960,6 +974,146 @@ def login_post():
     )
     login_user(user)
     return redirect(url_for("index"))
+
+
+@app.get("/forgot_password")
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    return render_template("forgot_password.html")
+
+
+@app.post("/forgot_password")
+def forgot_password_post():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
+    email = (request.form.get("email") or "").strip().lower()
+    generic_msg = "If you have an account with this email address, you will receive a password reset link shortly."
+
+    if not email:
+        flash(generic_msg, "success")
+        return render_template("forgot_password.html")
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT id, email FROM users WHERE email = ?", (email,))
+    row = c.fetchone()
+
+    if row:
+        try:
+            token = secrets.token_urlsafe(48)
+            expiry = datetime.utcnow() + timedelta(hours=1)
+            c.execute(
+                """
+                INSERT INTO password_reset_tokens (user_id, token, expires_at, used, created_at)
+                VALUES (?, ?, ?, 0, ?)
+                """,
+                (row["id"], token, expiry.isoformat(), datetime.utcnow().isoformat()),
+            )
+            conn.commit()
+
+            reset_url = url_for("reset_password", token=token, _external=True)
+            subject = "TheoChat password reset request"
+            plain_body = (
+                "If you requested a password reset for TheoChat, click this link: "
+                f"{reset_url}\n\nIf you did not request this, you can ignore this email."
+            )
+            html_body = f"""
+            <html>
+              <body style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;">
+                <p>If you requested a password reset for TheoChat, click the link below:</p>
+                <p><a href="{reset_url}">{reset_url}</a></p>
+                <p>If you did not request this, you can ignore this email.</p>
+              </body>
+            </html>
+            """
+            try:
+                send_email(row["email"], subject, plain_body, html_body)
+            except Exception as e:
+                print("Password reset email error:", e)
+        except Exception as e:
+            print("Password reset token error:", e)
+    conn.close()
+
+    flash(generic_msg, "success")
+    return render_template("forgot_password.html")
+
+
+def _validate_reset_token(token: str):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, user_id, token, expires_at, used FROM password_reset_tokens WHERE token = ?",
+        (token,),
+    )
+    row = c.fetchone()
+    conn.close()
+    if not row or row["used"]:
+        return None
+    try:
+        expires_at = datetime.fromisoformat(row["expires_at"])
+    except Exception:
+        return None
+    if expires_at < datetime.utcnow():
+        return None
+    return row
+
+
+@app.get("/reset_password")
+def reset_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
+    token = (request.args.get("token") or "").strip()
+    row = _validate_reset_token(token) if token else None
+    if not row:
+        error = "This password reset link is invalid or has expired."
+        return render_template("reset_password.html", token=None, error=error)
+
+    return render_template("reset_password.html", token=token, error=None)
+
+
+@app.post("/reset_password")
+def reset_password_post():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
+    token = (request.form.get("token") or "").strip()
+    password = request.form.get("password") or ""
+    confirm_password = request.form.get("confirm_password") or ""
+
+    row = _validate_reset_token(token)
+    if not row:
+        error = "This password reset link is invalid or has expired."
+        return render_template("reset_password.html", token=None, error=error)
+
+    if password != confirm_password:
+        error = "Passwords do not match."
+        return render_template("reset_password.html", token=token, error=error)
+
+    pw_error = validate_password_strength(password)
+    if pw_error:
+        return render_template("reset_password.html", token=token, error=pw_error)
+
+    pw_hash = generate_password_hash(password)
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (pw_hash, row["user_id"]),
+        )
+        c.execute(
+            "UPDATE password_reset_tokens SET used = 1, expires_at = ? WHERE id = ?",
+            (datetime.utcnow().isoformat(), row["id"]),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("Your password has been reset. Please log in with your new password.", "success")
+    return redirect(url_for("login"))
 
 
 @app.post("/logout")
@@ -2219,6 +2373,13 @@ def stripe_webhook():
             conn = get_db_connection()
             c = conn.cursor()
             c.execute(
+                "SELECT stripe_subscription_status, email FROM users WHERE id = ?",
+                (int(user_id),),
+            )
+            prev_row = c.fetchone()
+            prev_status = prev_row["stripe_subscription_status"] if prev_row else None
+            user_email = prev_row["email"] if prev_row else None
+            c.execute(
                 """
                 UPDATE users
                 SET stripe_subscription_id = ?, stripe_customer_id = ?, stripe_subscription_status = ?
@@ -2228,6 +2389,40 @@ def stripe_webhook():
             )
             conn.commit()
             conn.close()
+
+            try:
+                is_new_activation = (status in ("active", "trialing")) and (
+                    prev_status not in ("active", "trialing")
+                )
+                if is_new_activation and user_email:
+                    dashboard_url = url_for("index", _external=True)
+                    subject = "Welcome to TheoChat!"
+                    plain_body = (
+                        "Welcome to TheoChat!\n\n"
+                        "Your subscription is now active. Visit your dashboard to start using your TheoChat assistant:\n"
+                        f"{dashboard_url}\n\n"
+                        "Theo can answer visitor questions, capture leads, and represent your business 24/7.\n\n"
+                        "Thanks for choosing TheoChat!"
+                    )
+                    html_body = f"""
+                    <html>
+                      <body style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background:#f9fafb; padding:16px;">
+                        <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;padding:16px;">
+                          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                            <img src="{url_for('static', filename='img/theochat-logo-mark.png', _external=True)}" alt="TheoChat" style="height:24px;width:24px;border-radius:999px;object-fit:cover;" />
+                            <span style="font-weight:600;font-size:16px;">TheoChat</span>
+                          </div>
+                          <p style="margin:0 0 12px;">Welcome to TheoChat! Your subscription is now active.</p>
+                          <p style="margin:0 0 12px;">Visit your dashboard to start using Theo to assist your website visitors 24/7.</p>
+                          <p style="margin:0 0 16px;"><a href="{dashboard_url}" style="color:#2563eb;text-decoration:none;">Open dashboard</a></p>
+                          <p style="margin:0;color:#6b7280;font-size:12px;">Thanks for choosing TheoChat.</p>
+                        </div>
+                      </body>
+                    </html>
+                    """
+                    send_email(user_email, subject, plain_body, html_body)
+            except Exception as e:
+                print("Welcome email error:", e)
 
     elif event_type == "customer.subscription.updated":
         sub = event["data"]["object"]
