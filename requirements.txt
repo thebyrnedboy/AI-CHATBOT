@@ -6,3 +6,4 @@ stripe>=10.0.0
 PyPDF2
 requests
 beautifulsoup4
+gunicorn
