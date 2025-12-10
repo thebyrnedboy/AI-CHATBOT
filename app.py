@@ -4,7 +4,7 @@ import secrets
 import sqlite3
 import time
 from typing import List, Tuple, Optional, Dict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, UTC
 import re
 from functools import wraps
 import stripe
@@ -870,6 +870,15 @@ def validate_password_strength(password: str) -> Optional[str]:
     if not re.search(r"[^A-Za-z0-9]", password):
         return "Password must include at least one special character (e.g. !@#$%^&*)."
     return None
+
+
+def validate_password_rules(password: str) -> Tuple[bool, Optional[str]]:
+    """
+    Shared password validation for registration and reset flows.
+    Returns (is_valid, error_message).
+    """
+    err = validate_password_strength(password)
+    return (err is None, err)
 # ==========================
 # Auth routes
 # ==========================
@@ -889,9 +898,9 @@ def register_post():
         flash("Email and password are required.", "error")
         return redirect(url_for("register"))
     # Validate password complexity
-    pw_error = validate_password_strength(password)
-    if pw_error:
-        flash(pw_error, "error")
+    is_valid, pw_error = validate_password_rules(password)
+    if not is_valid:
+        flash(pw_error or "Invalid password.", "error")
         return redirect(url_for("register"))
     if password != confirm:
         flash("Passwords do not match.", "error")
@@ -1003,13 +1012,13 @@ def forgot_password_post():
     if row:
         try:
             token = secrets.token_urlsafe(48)
-            expiry = datetime.utcnow() + timedelta(hours=1)
+            expiry = datetime.now(UTC) + timedelta(hours=1)
             c.execute(
                 """
                 INSERT INTO password_reset_tokens (user_id, token, expires_at, used, created_at)
                 VALUES (?, ?, ?, 0, ?)
                 """,
-                (row["id"], token, expiry.isoformat(), datetime.utcnow().isoformat()),
+                (row["id"], token, expiry.isoformat(), datetime.now(UTC).isoformat()),
             )
             conn.commit()
 
@@ -1055,7 +1064,7 @@ def _validate_reset_token(token: str):
         expires_at = datetime.fromisoformat(row["expires_at"])
     except Exception:
         return None
-    if expires_at < datetime.utcnow():
+    if expires_at < datetime.now(UTC):
         return None
     return row
 
@@ -1092,8 +1101,8 @@ def reset_password_post():
         error = "Passwords do not match."
         return render_template("reset_password.html", token=token, error=error)
 
-    pw_error = validate_password_strength(password)
-    if pw_error:
+    is_valid, pw_error = validate_password_rules(password)
+    if not is_valid:
         return render_template("reset_password.html", token=token, error=pw_error)
 
     pw_hash = generate_password_hash(password)
@@ -1106,7 +1115,7 @@ def reset_password_post():
         )
         c.execute(
             "UPDATE password_reset_tokens SET used = 1, expires_at = ? WHERE id = ?",
-            (datetime.utcnow().isoformat(), row["id"]),
+            (datetime.now(UTC).isoformat(), row["id"]),
         )
         conn.commit()
     finally:
