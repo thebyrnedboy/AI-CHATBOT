@@ -9,7 +9,7 @@
         <form method="post" action="{{ url_for('register') }}" style="margin:0;">
           <label style="display:block;margin-bottom:0.85rem;font-size:0.95rem;">
             <span style="display:block;margin-bottom:0.35rem;">Email</span>
-            <input type="email" name="email" required autocomplete="email" style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"/>
+            <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"/>
           </label>
           <label style="display:block;margin-bottom:0.85rem;font-size:0.95rem;">
             <span style="display:block;margin-bottom:0.35rem;">Password</span>

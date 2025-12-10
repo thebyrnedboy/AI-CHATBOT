@@ -896,7 +896,7 @@ def validate_password_rules(password: str) -> Tuple[bool, Optional[str]]:
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    return render_template("register.html")
+    return render_template("register.html", email="")
 
 
 @app.post("/register")
@@ -906,15 +906,15 @@ def register_post():
     confirm = request.form.get("confirm_password") or ""
     if not email or not password:
         flash("Email and password are required.", "error")
-        return redirect(url_for("register"))
+        return render_template("register.html", email=email)
     # Validate password complexity
     is_valid, pw_error = validate_password_rules(password)
     if not is_valid:
         flash(pw_error or "Invalid password.", "error")
-        return redirect(url_for("register"))
+        return render_template("register.html", email=email)
     if password != confirm:
         flash("Passwords do not match.", "error")
-        return redirect(url_for("register"))
+        return render_template("register.html", email=email)
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -922,7 +922,7 @@ def register_post():
     if c.fetchone():
         conn.close()
         flash("Email already registered. Please log in.", "error")
-        return redirect(url_for("login"))
+        return render_template("register.html", email=email)
 
     pw_hash = generate_password_hash(password)
     business_name = f"{email}'s Business"
@@ -961,7 +961,7 @@ def register_post():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    return render_template("login.html")
+    return render_template("login.html", email="")
 
 
 @app.post("/login")
@@ -980,7 +980,7 @@ def login_post():
 
     if not row or not check_password_hash(row["password_hash"], password):
         flash("Invalid credentials.", "error")
-        return redirect(url_for("login"))
+        return render_template("login.html", email=email)
 
     user = User(
         row["id"],
@@ -999,7 +999,7 @@ def login_post():
 def forgot_password():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    return render_template("forgot_password.html")
+    return render_template("forgot_password.html", email="")
 
 
 @app.post("/forgot_password")
@@ -1012,7 +1012,7 @@ def forgot_password_post():
 
     if not email:
         flash(generic_msg, "success")
-        return render_template("forgot_password.html")
+        return render_template("forgot_password.html", email=email)
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -1056,7 +1056,7 @@ def forgot_password_post():
     conn.close()
 
     flash(generic_msg, "success")
-    return render_template("forgot_password.html")
+    return render_template("forgot_password.html", email=email)
 
 
 def _validate_reset_token(token: str):
