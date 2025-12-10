@@ -9,6 +9,7 @@ import re
 from functools import wraps
 import stripe
 import smtplib
+import json
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -72,6 +73,7 @@ SMTP_PASSWORD = (os.getenv("SMTP_PASSWORD") or "").strip()
 SMTP_USE_TLS = (os.getenv("SMTP_USE_TLS") or "true").strip().lower() == "true"
 SMTP_FROM_EMAIL = (os.getenv("SMTP_FROM_EMAIL") or SMTP_USERNAME or "no-reply@example.com").strip()
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "TheoChat")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
@@ -737,32 +739,40 @@ def get_usage_row(user_id: int, business_id: int, usage_date: str):
 
 def send_email(to_email: str, subject: str, plain_body: str, html_body: Optional[str] = None) -> bool:
     """
-    Best-effort SMTP email sender supporting plain text with optional HTML.
+    Best-effort Brevo email sender supporting HTML with plain text fallback.
     """
-    if not (SMTP_HOST and SMTP_PORT and SMTP_FROM_EMAIL and to_email):
+    if not (BREVO_API_KEY and SMTP_FROM_EMAIL and to_email):
         return False
 
-    msg = MIMEMultipart("alternative")
-    from_header = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-    msg["From"] = from_header
-    msg["To"] = to_email
-    msg["Subject"] = subject
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+    }
 
-    msg.attach(MIMEText(plain_body or "", "plain"))
+    html_content = html_body or f"<pre>{plain_body or ''}</pre>"
 
-    if html_body:
-        msg.attach(MIMEText(html_body, "html"))
+    data = {
+        "sender": {
+            "name": SMTP_FROM_NAME,
+            "email": SMTP_FROM_EMAIL,
+        },
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            if SMTP_USE_TLS:
-                server.starttls()
-            if SMTP_USERNAME and SMTP_PASSWORD:
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers=headers,
+            data=json.dumps(data),
+        )
+        if response.status_code >= 300:
+            print("[TheoChat] Brevo email send failed:", response.text)
+            return False
         return True
     except Exception as e:
-        # log but don't crash the request
         print(f"[TheoChat] Email send failed: {e}")
         return False
 
