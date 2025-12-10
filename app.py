@@ -42,7 +42,7 @@ except Exception:
 
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, quote
 from urllib import robotparser
 from werkzeug.utils import secure_filename
 
@@ -234,6 +234,7 @@ def init_db():
     ensure_column(c, "businesses", "allowed_domains", "TEXT")
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
+    ensure_column(c, "contact_requests", "visitor_phone", "TEXT")
 
     c.execute(
         """
@@ -740,7 +741,7 @@ def send_email(to_email: str, subject: str, plain_body: str, html_body: Optional
             server.send_message(msg)
         return True
     except Exception as e:
-        # log but donâ€™t crash the request
+        # log but don't crash the request
         print(f"[TheoChat] Email send failed: {e}")
         return False
 
@@ -750,6 +751,7 @@ def send_contact_email(
     business_name: str,
     visitor_name: str,
     visitor_email: str,
+    visitor_phone: str,
     message: str,
 ) -> bool:
     """
@@ -765,15 +767,44 @@ def send_contact_email(
 
     subject = f"New message via your TheoChat widget - {business_name}"
     plain_body = (
-        "You’ve received a new message via your TheoChat widget.\n\n"
+        "You've received a new message via your TheoChat widget.\n\n"
         f"Business: {business_name}\n\n"
         "Visitor details:\n"
         f"Name: {visitor_name or '(not provided)'}\n"
-        f"Email: {visitor_email or '(not provided)'}\n\n"
+        f"Email: {visitor_email or '(not provided)'}\n"
+        f"Phone: {visitor_phone or '(not provided)'}\n\n"
         "Message:\n"
         f"{message or '(no message provided)'}\n\n"
         "This request was captured via your TheoChat widget."
     )
+
+    reply_button_html = ""
+    if visitor_email:
+        reply_subject = f"Re: your message to {business_name}"
+        greeting_name = visitor_name or ""
+        body_text = (
+            (f"Hi {greeting_name}," if greeting_name else "Hi,")
+            + "\n\n"
+            + "Thanks for your message via our website. You wrote:\n\n"
+            + (message or "(no message provided)")
+            + "\n\n"
+            + "Best regards,\n"
+            + business_name
+        )
+        subject_q = quote(reply_subject)
+        body_q = quote(body_text)
+        mailto_href = f"mailto:{visitor_email}?subject={subject_q}&body={body_q}"
+
+        reply_button_html = f"""
+          <p style="margin:16px 0 0;">
+            <a href="{mailto_href}"
+               style="display:inline-block;padding:8px 14px;border-radius:999px;
+                      background:#2563eb;color:#ffffff;text-decoration:none;
+                      font-size:14px;">
+              Reply to this customer
+            </a>
+          </p>
+        """
 
     logo_url = url_for("static", filename="img/theochat-logo-mark.png", _external=True)
     html_body = f"""
@@ -784,12 +815,14 @@ def send_contact_email(
             <img src="{logo_url}" alt="TheoChat" style="height:24px;width:24px;border-radius:999px;object-fit:cover;" />
             <span style="font-weight:600;font-size:16px;">TheoChat</span>
           </div>
-          <p style="margin:0 0 12px;">You’ve received a new message via your TheoChat widget:</p>
+          <p style="margin:0 0 12px;">You've received a new message via your TheoChat widget:</p>
           <p style="margin:0 0 8px;"><strong>Name:</strong> {visitor_name or "Unknown name"}</p>
           <p style="margin:0 0 8px;"><strong>Email:</strong> {visitor_email or "No email provided"}</p>
+          <p style="margin:0 0 8px;"><strong>Phone:</strong> {visitor_phone or "No phone provided"}</p>
           <p style="margin:0 0 8px;"><strong>Message:</strong></p>
           <p style="margin:0 0 16px; white-space:pre-wrap;">{message or "(no message provided)"}</p>
-          <p style="margin:0;color:#6b7280;font-size:12px;">This email was sent automatically by TheoChat.</p>
+          {reply_button_html}
+          <p style="margin:16px 0 0;color:#6b7280;font-size:12px;">This email was sent automatically by TheoChat.</p>
         </div>
       </body>
     </html>
@@ -1404,7 +1437,13 @@ def widget_contact():
     data = request.get_json(silent=True) or {}
     visitor_name = (data.get("name") or "").strip()
     visitor_email = (data.get("email") or "").strip()
+    visitor_phone = (data.get("phone") or "").strip()
     message = (data.get("message") or "").strip()
+
+    if not visitor_email:
+        return add_cors(
+            Response("Error: Email is required so the business can reply.", status=400, mimetype="text/plain")
+        )
 
     if not message:
         return add_cors(
@@ -1414,8 +1453,8 @@ def widget_contact():
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
-        "INSERT INTO contact_requests (business_id, source, visitor_name, visitor_email, message) VALUES (?, ?, ?, ?, ?)",
-        (int(biz["id"]), "widget", visitor_name, visitor_email, message),
+        "INSERT INTO contact_requests (business_id, source, visitor_name, visitor_email, visitor_phone, message) VALUES (?, ?, ?, ?, ?, ?)",
+        (int(biz["id"]), "widget", visitor_name, visitor_email, visitor_phone, message),
     )
     conn.commit()
     conn.close()
@@ -1427,6 +1466,7 @@ def widget_contact():
             business_name=business_name,
             visitor_name=visitor_name,
             visitor_email=visitor_email,
+            visitor_phone=visitor_phone,
             message=message,
         )
     except Exception as e:
@@ -1670,11 +1710,19 @@ def embed_js():
 
   const emailInput = document.createElement("input");
   emailInput.type = "email";
-  emailInput.placeholder = "Your email (optional)";
+  emailInput.placeholder = "Your email (required)";
   emailInput.style.padding = "8px";
   emailInput.style.border = "1px solid #d1d5db";
   emailInput.style.borderRadius = "8px";
   emailInput.style.fontSize = "14px";
+
+  const phoneInput = document.createElement("input");
+  phoneInput.type = "tel";
+  phoneInput.placeholder = "Your phone number (optional)";
+  phoneInput.style.padding = "8px";
+  phoneInput.style.border = "1px solid #d1d5db";
+  phoneInput.style.borderRadius = "8px";
+  phoneInput.style.fontSize = "14px";
 
   const messageInput = document.createElement("textarea");
   messageInput.placeholder = "Your message";
@@ -1716,6 +1764,7 @@ def embed_js():
 
   contactForm.appendChild(nameInput);
   contactForm.appendChild(emailInput);
+  contactForm.appendChild(phoneInput);
   contactForm.appendChild(messageInput);
   contactForm.appendChild(contactActions);
   contactForm.appendChild(contactStatus);
@@ -1807,7 +1856,13 @@ def embed_js():
   contactSend.addEventListener("click", async () => {
     const name = nameInput.value.trim();
     const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
     const message = messageInput.value.trim();
+    if (!email) {
+      contactStatus.textContent = "Please enter your email so the business can reply.";
+      contactStatus.style.color = "#b91c1c";
+      return;
+    }
     if (!message) {
       contactStatus.textContent = "Please enter a message.";
       contactStatus.style.color = "#b91c1c";
@@ -1820,7 +1875,7 @@ def embed_js():
       const res = await fetch(BASE_URL.replace(/\/$/, "") + "/widget_contact?api_key=" + encodeURIComponent(API_KEY), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message })
+        body: JSON.stringify({ name, email, phone, message })
       });
       const text = await res.text();
       if (!res.ok) {
@@ -1836,6 +1891,7 @@ def embed_js():
       contactStatus.style.color = "#15803d";
       nameInput.value = "";
       emailInput.value = "";
+      phoneInput.value = "";
       messageInput.value = "";
       setTimeout(() => toggleContactForm(false), 1200);
     } catch (e) {
