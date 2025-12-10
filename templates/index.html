@@ -447,6 +447,15 @@
             {% if imported_website_url %}Change import{% else %}Import website{% endif %}
           </button>
         </form>
+        {% if imported_website_url %}
+        <form action="{{ url_for('import_site') }}" method="post" style="margin-top:0.35rem;display:flex;flex-direction:column;gap:0.35rem;max-width:520px;">
+          <input type="hidden" name="website_url" value="{{ imported_website_url }}" />
+          <button type="submit" class="secondary" style="align-self:flex-start;padding:0.45rem 0.9rem;border-radius:6px;">Re-import website</button>
+          <div style="font-size:0.85rem;color:#6b7280;">
+            If you’ve updated your website, click this to wipe the old website content and re-learn it.
+          </div>
+        </form>
+        {% endif %}
       </div>
     </div>
 
@@ -702,6 +711,5 @@ if (copySnippetBtn && embedSnippetEl) {
 </script>
 
 {% endblock %}
-
 
 

@@ -1436,22 +1436,26 @@ def import_site():
         flash(err or "No readable text found. Please check the website and try again.", "error")
         return redirect(url_for("knowledge"))
 
-    chunks = chunk_text(text, max_chars=500)
-    existing = get_chunk_count(int(current_user.id), int(current_user.business_id))
-    if existing + len(chunks) > MAX_CHUNKS:
-        flash("Storage limit reached. Remove files to add more.", "error")
-        return redirect(url_for("knowledge"))
+    user_id = int(current_user.id)
+    biz_id = int(current_user.business_id)
 
+    # Remove existing website import chunks for this business before re-importing
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
         "DELETE FROM document_chunks WHERE user_id = ? AND business_id = ? AND filename = ?",
-        (int(current_user.id), int(current_user.business_id), "website_import"),
+        (user_id, biz_id, "website_import"),
     )
     conn.commit()
     conn.close()
 
-    store_document_chunks(int(current_user.id), int(current_user.business_id), "website_import", chunks, "Website import")
+    chunks = chunk_text(text, max_chars=500)
+    existing = get_chunk_count(user_id, biz_id)
+    if existing + len(chunks) > MAX_CHUNKS:
+        flash("Storage limit reached. Remove files to add more.", "error")
+        return redirect(url_for("knowledge"))
+
+    store_document_chunks(user_id, biz_id, "website_import", chunks, "Website import")
 
     today = time.strftime("%Y-%m-%d")
     bump_usage(int(current_user.id), int(current_user.business_id), today, "uploads", 1)
