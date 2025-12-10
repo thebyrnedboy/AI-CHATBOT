@@ -432,7 +432,8 @@
             placeholder="https://yourwebsite.com"
             value="{{ imported_website_url or '' }}"
             {% if imported_website_url %}disabled{% endif %}
-            style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;{% if imported_website_url %}background:#f9fafb;color:#6b7280;cursor:not-allowed;{% endif %}"
+            style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;"
+            class="{% if imported_website_url %}bg-gray-50 text-gray-500 cursor-not-allowed{% endif %}"
           />
           <button
             id="website-import-button"
@@ -443,26 +444,6 @@
             {% if imported_website_url %}Change import{% else %}Import website{% endif %}
           </button>
         </form>
-        {% if imported_website_url %}
-        <script>
-          (function() {
-            const urlInput = document.getElementById("website-url-input");
-            const importBtn = document.getElementById("website-import-button");
-            if (!urlInput || !importBtn) return;
-            importBtn.addEventListener("click", function(e) {
-              if (!urlInput.disabled) return;
-              e.preventDefault();
-              urlInput.disabled = false;
-              urlInput.style.background = "#fff";
-              urlInput.style.color = "#111827";
-              urlInput.style.cursor = "text";
-              importBtn.textContent = "Import website";
-              importBtn.type = "submit";
-              urlInput.focus();
-            });
-          })();
-        </script>
-        {% endif %}
       </div>
     </div>
 
@@ -542,6 +523,26 @@ const fileInput = document.getElementById("file-input");
 const labelInput = document.getElementById("upload-label");
 const copySnippetBtn = document.getElementById("copy-snippet-btn");
 const embedSnippetEl = document.getElementById("embed-snippet");
+const websiteUrlInput = document.getElementById("website-url-input");
+const websiteImportButton = document.getElementById("website-import-button");
+const hasImportedWebsiteUrl = "{{ 'true' if imported_website_url else 'false' }}";
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (!hasImportedWebsiteUrl) return;
+  if (!websiteUrlInput || !websiteImportButton) return;
+
+  websiteImportButton.addEventListener("click", (e) => {
+    if (!websiteUrlInput.disabled) return;
+    e.preventDefault();
+    websiteUrlInput.disabled = false;
+    websiteUrlInput.style.background = "#fff";
+    websiteUrlInput.style.color = "#111827";
+    websiteUrlInput.style.cursor = "text";
+    websiteImportButton.textContent = "Import website";
+    websiteImportButton.type = "submit";
+    websiteUrlInput.focus();
+  });
+});
 
 function addBubble(text, cls) {
   const div = document.createElement("div");
