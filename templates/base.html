@@ -96,6 +96,12 @@
       color: inherit;
     }
 
+    .navbar-brand .nav-logo-img {
+      height: 32px;
+      width: auto;
+      display: block;
+    }
+
     .theochat-logo-full {
       max-width: 220px;
       height: auto;
@@ -482,15 +488,14 @@
     <header>
       <h1 class="site-logo">
         <a
-          class="logo-link"
+          class="logo-link navbar-brand"
           href="{% if current_user.is_authenticated %}{{ url_for('index') }}{% else %}{{ url_for('marketing') }}{% endif %}"
         >
           <img
-            src="{{ url_for('static', filename='img/theochat-logo-mark.png') }}"
-            alt="TheoChat logo"
-            class="site-logo-img"
+            src="{{ url_for('static', filename='img/theochat-logo-full.png') }}"
+            alt="TheoChat"
+            class="nav-logo-img"
           />
-          <span class="site-logo-text">TheoChat</span>
         </a>
       </h1>
       <div class="nav-right">
