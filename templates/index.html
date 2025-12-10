@@ -470,16 +470,20 @@
 
   <div class="card">
     <h3>Embed on your site</h3>
-    <p>Paste this snippet before &lt;/body&gt; or in your tag manager.</p>
-    <div class="snippet" id="embed-snippet">
-      &lt;script src="/embed.js?api_key={{ api_key }}" async&gt;&lt;/script&gt;
-    </div>
-    <div style="display:flex;gap:0.65rem;align-items:center;margin-top:0.5rem;flex-wrap:wrap;">
-      <button type="button" class="primary" id="copy-snippet-btn" style="padding:0.4rem 0.75rem;font-size:0.9rem;">Copy snippet</button>
-      <a href="{{ url_for('setup') }}" style="font-size:0.9rem;color:#2563eb;text-decoration:none;">
-        Need help adding this to your website? Click here
-      </a>
-    </div>
+    {% if embed_available %}
+      <p>Paste this snippet before &lt;/body&gt; or in your tag manager.</p>
+      <div class="snippet" id="embed-snippet">
+        &lt;script src="/embed.js?api_key={{ api_key }}" async&gt;&lt;/script&gt;
+      </div>
+      <div style="display:flex;gap:0.65rem;align-items:center;margin-top:0.5rem;flex-wrap:wrap;">
+        <button type="button" class="primary" id="copy-snippet-btn" style="padding:0.4rem 0.75rem;font-size:0.9rem;">Copy snippet</button>
+        <a href="{{ url_for('setup') }}" style="font-size:0.9rem;color:#2563eb;text-decoration:none;">
+          Need help adding this to your website? Click here
+        </a>
+      </div>
+    {% else %}
+      <p>Your embed code will appear here once you've added your business information and knowledge.</p>
+    {% endif %}
   </div>
 </div>
 

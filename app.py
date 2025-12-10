@@ -1188,6 +1188,7 @@ def index():
     usage_messages = usage["messages"] if usage else 0
     usage_uploads = usage["uploads"] if usage else 0
     chunk_count = get_chunk_count(user_id, biz_id)
+    embed_available = chunk_count > 0
 
     biz = get_business_for_user(user_id)
     api_key = biz["api_key"] if biz else None
@@ -1211,6 +1212,7 @@ def index():
         contact_email=contact_email,
         subscription_info=subscription_info,
         trial_days_left=trial_days_left,
+        embed_available=embed_available,
     )
 
 
@@ -2188,6 +2190,8 @@ def setup():
     api_key = biz["api_key"] if biz else None
     business_name = biz["name"] if biz else ""
     allowed_domains = biz["allowed_domains"] if biz and biz["allowed_domains"] else ""
+    chunk_count = get_chunk_count(user_id, int(biz["id"])) if biz else 0
+    embed_available = chunk_count > 0
 
     return render_template(
         "setup.html",
@@ -2197,6 +2201,7 @@ def setup():
         api_key=api_key,
         business_name=business_name,
         allowed_domains=allowed_domains,
+        embed_available=embed_available,
     )
 
 

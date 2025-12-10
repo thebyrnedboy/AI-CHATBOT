@@ -246,9 +246,10 @@
             <span class="step-label">Step 2</span>
             <p class="step-title">Add the script to your site</p>
           </div>
-      <p class="step-body">
-        Paste this snippet to enable TheoChat before the closing &lt;/body&gt; tag or into your website builder's custom code area. The <code>data-api-key</code> attribute identifies your TheoChat business.
-      </p>
+      {% if embed_available %}
+        <p class="step-body">
+          Paste this snippet to enable TheoChat before the closing &lt;/body&gt; tag or into your website builder's custom code area. The <code>data-api-key</code> attribute identifies your TheoChat business.
+        </p>
         <div class="code-snippet" id="embed-snippet">
           &lt;script
             src="{{ url_for('embed_js', _external=True) }}"
@@ -268,6 +269,11 @@
             async
           &gt;&lt;/script&gt;
         </div>
+      {% else %}
+        <p class="step-body">
+          Once you've added your business details and uploaded knowledge, your embed code will appear here so you can add TheoChat to your site.
+        </p>
+      {% endif %}
         </div>
 
         <!-- Step 3 -->
