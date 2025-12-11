@@ -255,24 +255,20 @@
         <p class="step-body">
           Paste this snippet to enable TheoChat before the closing &lt;/body&gt; tag or into your website builder's custom code area.
         </p>
-        <div class="relative" style="position:relative;">
-          <pre style="background:#0f172a;color:#e5e7eb;border-radius:8px;padding:0.75rem;overflow:auto;font-family:Menlo, Consolas, monospace;font-size:0.9rem;margin:0;">
+        <div class="tc-code-block relative">
 <code id="embed-snippet-setup"><script
   src="https://theochat.co.uk/embed.js?api_key={{ api_key }}"
   async
 ></script></code>
-          </pre>
           <button
             type="button"
             aria-label="Copy embed snippet"
-            class="icon-button"
-            style="position:absolute;top:0.5rem;right:0.5rem;"
+            class="tc-copy-btn"
             data-copy-target="#embed-snippet-setup"
+            data-copy-label="Copy code"
+            data-copied-label="Copied"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
+            <span class="tc-copy-icon">📋</span><span class="tc-copy-label">Copy code</span>
           </button>
         </div>
       {% else %}

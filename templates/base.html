@@ -173,6 +173,142 @@
       color: #cbd5f5;
     }
 
+    .tc-form {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .tc-field-row {
+      margin-bottom: 1rem;
+    }
+
+    .tc-input-wrapper {
+      position: relative;
+      display: block;
+    }
+
+    .tc-input {
+      width: 100%;
+      border-radius: 0.75rem;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.95rem;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      outline: none;
+    }
+
+    .tc-input:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.5);
+    }
+
+    .tc-input::placeholder {
+      color: #9ca3af;
+    }
+
+    .dark .tc-input {
+      background: #020617;
+      border-color: #1f2937;
+      color: #e5e7eb;
+    }
+
+    .dark .tc-input::placeholder {
+      color: #6b7280;
+    }
+
+    .tc-help-text {
+      font-size: 0.8rem;
+      color: #6b7280;
+    }
+
+    .dark .tc-help-text {
+      color: #9ca3af;
+    }
+
+    .tc-password-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      color: #6b7280;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tc-password-toggle:hover {
+      color: #0f172a;
+    }
+
+    .dark .tc-password-toggle:hover {
+      color: #e5e7eb;
+    }
+
+    .tc-code-block {
+      position: relative;
+      border-radius: 1rem;
+      padding: 0.9rem 1rem;
+      margin-top: 0.5rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: #0b1220;
+      color: #e5e7eb;
+    }
+
+    .dark .tc-code-block {
+      background: #020617;
+      border-color: rgba(129, 140, 248, 0.4);
+      color: #e5e7eb;
+    }
+
+    .tc-code-block code {
+      white-space: pre;
+    }
+
+    .tc-copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .tc-copy-btn:hover {
+      background: rgba(15, 23, 42, 1);
+    }
+
+    .dark .tc-copy-btn {
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .tc-copy-icon {
+      font-size: 0.85rem;
+    }
+
+    .tc-copy-label {
+      white-space: nowrap;
+    }
+
+    .tc-copied-icon {
+      font-size: 0.85rem;
+    }
+
     .shell {
       max-width: 1040px;
       margin: 0 auto;
@@ -832,13 +968,18 @@
           var text = getCopyText(target);
           if (!text) return;
 
-          var original = btn.textContent;
+          var originalHtml = btn.innerHTML;
+          var copyLabel = btn.getAttribute("data-copy-label");
+          var copiedLabel = btn.getAttribute("data-copied-label");
 
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(function () {
-              if (original !== null) {
+              if (copyLabel && copiedLabel) {
+                btn.innerHTML = '<span class="tc-copied-icon">✓</span><span class="tc-copy-label">' + copiedLabel + "</span>";
+                setTimeout(function () { btn.innerHTML = originalHtml; }, 1500);
+              } else if (originalHtml !== null) {
                 btn.textContent = "Copied!";
-                setTimeout(function () { btn.textContent = original; }, 1500);
+                setTimeout(function () { btn.innerHTML = originalHtml; }, 1500);
               }
             }).catch(function () {});
           } else {

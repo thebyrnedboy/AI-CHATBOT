@@ -1,33 +1,39 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="tc-card max-w-md mx-auto space-y-4">
-  <div>
-    <h1 class="tc-h1" style="margin-bottom:0.35rem;">Log in to TheoChat</h1>
-    <p class="tc-subtext">Welcome to TheoChat.</p>
-  </div>
-  <div class="p-1">
-    <form method="post" action="{{ url_for('login') }}" class="space-y-4">
-      <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
-        <span class="mb-1 block">Email</span>
-        <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-      </label>
-      <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
-        <span class="mb-1 block">Password</span>
-        <div class="password-wrapper">
-          <input type="password" name="password" required autocomplete="current-password" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-          <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye" alt="Show password">
+<div class="tc-card max-w-md mx-auto">
+  <div class="tc-form space-y-4">
+    <div>
+      <h1 class="tc-h1" style="margin-bottom:0.35rem;">Log in to TheoChat</h1>
+      <p class="tc-subtext">Welcome to TheoChat.</p>
+    </div>
+    <div class="p-1">
+      <form method="post" action="{{ url_for('login') }}" class="space-y-4">
+        <div class="tc-field-row">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <span class="mb-1 block">Email</span>
+            <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" class="tc-input w-full" />
+          </label>
         </div>
-      </label>
-      <div class="text-center">
-        <button class="tc-btn-primary w-full justify-center" type="submit">Log in</button>
-      </div>
-    </form>
-    <p class="mt-3 text-center text-xs text-slate-600 dark:text-slate-400">
-      <a href="{{ url_for('forgot_password') }}" class="underline">Forgot your password?</a>
-    </p>
-    <p class="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
-      Need an account? <a href="{{ url_for('register') }}" class="underline">Register</a>
-    </p>
+        <div class="tc-field-row">
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <span class="mb-1 block">Password</span>
+            <div class="password-wrapper tc-input-wrapper">
+              <input type="password" name="password" required autocomplete="current-password" class="tc-input w-full" />
+              <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye tc-password-toggle" alt="Show password">
+            </div>
+          </label>
+        </div>
+        <div class="text-center">
+          <button class="tc-btn-primary w-full justify-center" type="submit">Log in</button>
+        </div>
+      </form>
+      <p class="mt-3 text-center text-xs text-slate-600 dark:text-slate-400">
+        <a href="{{ url_for('forgot_password') }}" class="underline">Forgot your password?</a>
+      </p>
+      <p class="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
+        Need an account? <a href="{{ url_for('register') }}" class="underline">Register</a>
+      </p>
+    </div>
   </div>
- </div>
+</div>
 {% endblock %}

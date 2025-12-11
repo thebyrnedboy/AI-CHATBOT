@@ -105,9 +105,12 @@
         </div>
         <h1 class="tc-h1">Meet Theo — your website's AI assistant.</h1>
         <p class="tc-subtext mb-4">Answer questions, capture leads, and assist customers 24/7 with a smart AI trained on your business.</p>
-        <div class="hero-actions">
+        <div class="hero-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;">
           <a href="{{ url_for('register') }}" class="tc-btn-primary">Start free 7-day trial</a>
-          <a href="{{ url_for('login') }}" class="tc-link-secondary">Already have an account?</a>
+          <div class="flex items-center text-sm tc-subtext" style="display:flex;align-items:center;gap:0.35rem;">
+            <span>Already have an account?</span>
+            <a href="{{ url_for('login') }}" class="tc-link-secondary">Log in</a>
+          </div>
         </div>
         <p class="hero-note">No long-term contract. Cancel anytime.</p>
       </div>
