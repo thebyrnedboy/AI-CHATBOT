@@ -1052,8 +1052,16 @@
       const el = document.querySelector(targetSelector);
       if (!el) return;
 
-      const text = (el.tagName === "TEXTAREA" || el.tagName === "INPUT") ? el.value : el.innerText;
-      if (!text) return;
+      const raw = (el.tagName === "TEXTAREA" || el.tagName === "INPUT") ? el.value : el.innerText;
+      if (!raw) return;
+
+      const decodeHTMLEntities = (str) => {
+        const e = document.createElement("textarea");
+        e.innerHTML = str;
+        return e.value;
+      };
+
+      const text = decodeHTMLEntities(raw);
 
       const originalText = btn.textContent;
       const isSnippetBtn = btn.classList.contains("tc-copy-btn");
