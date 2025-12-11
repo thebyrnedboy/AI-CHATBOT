@@ -304,36 +304,51 @@
 
     @media (max-width: 768px) {
       .tc-shell,
-      .tc-main,
-      .tc-card,
-      .setup-page {
-        padding-left: 1.25rem;
-        padding-right: 1.25rem;
-      }
-
-      .step-card,
-      .tc-card.setup-main,
-      .card.setup-main,
-      .step-card .tc-card {
+      .tc-main {
+        max-width: 100%;
+        width: 100%;
         margin-left: 0;
         margin-right: 0;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .tc-card,
+      .card {
         width: 100%;
+        margin-left: 0;
+        margin-right: 0;
         border-radius: 1.25rem;
+        box-sizing: border-box;
       }
 
-      .step-card p,
-      .tc-subtext,
-      .step-body,
-      .card p,
-      .setup-page p {
-        font-size: 0.95rem;
-        line-height: 1.6;
+      body,
+      .tc-subtext {
+        font-size: 0.9rem;
+        line-height: 1.5;
       }
 
-      .tc-code-box {
-        max-width: 100%;
+      h1 {
+        font-size: 1.6rem;
+      }
+
+      h2 {
+        font-size: 1.3rem;
+      }
+
+      .main-tabs {
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
         overflow-x: auto;
-        font-size: 0.85rem;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      html,
+      body {
+        max-width: 100%;
+        overflow-x: hidden;
       }
     }
 
