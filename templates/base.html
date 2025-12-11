@@ -269,10 +269,11 @@
       font-size: 0.9rem;
       overflow-x: auto;
       border: 1px solid rgba(148, 163, 184, 0.35);
-      background: #0b1120;
+      background: #1e1e1e !important;
       color: #e5e7eb;
       max-height: none;
       overflow-y: auto;
+      border-radius: inherit;
     }
 
     .tc-shell:not(.dark) .tc-code-block,
@@ -291,8 +292,14 @@
 
     .tc-code-block code,
     .tc-code-box code {
-      white-space: pre;
+      font-family: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace !important;
+      font-size: 9pt !important;
+      text-shadow: none !important;
       color: inherit;
+      background: transparent !important;
+      display: block;
+      line-height: 1.5;
+      white-space: pre;
     }
 
     .tc-copy-btn {
