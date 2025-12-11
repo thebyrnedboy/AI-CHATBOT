@@ -343,10 +343,10 @@ def init_db():
         )
         default_business_id = c.lastrowid
 
-    c.execute("SELECT id FROM users WHERE email = ?", (ADMIN_EMAIL,))
+    pw_hash = generate_password_hash(ADMIN_PASSWORD)
+    c.execute("SELECT id, business_id, stripe_subscription_status, plan FROM users WHERE email = ?", (ADMIN_EMAIL,))
     row = c.fetchone()
     if not row:
-        pw_hash = generate_password_hash(ADMIN_PASSWORD)
         c.execute(
             "INSERT INTO users (email, password_hash, business_id, stripe_subscription_status, plan) VALUES (?, ?, ?, ?, ?)",
             (ADMIN_EMAIL, pw_hash, default_business_id, "active", "starter"),
@@ -354,6 +354,13 @@ def init_db():
         admin_user_id = c.lastrowid
     else:
         admin_user_id = row["id"]
+        updated_business_id = row["business_id"] if row["business_id"] is not None else default_business_id
+        updated_status = row["stripe_subscription_status"] if row["stripe_subscription_status"] is not None else "active"
+        updated_plan = row["plan"] if row["plan"] is not None else "starter"
+        c.execute(
+            "UPDATE users SET password_hash = ?, business_id = ?, stripe_subscription_status = ?, plan = ? WHERE id = ?",
+            (pw_hash, updated_business_id, updated_status, updated_plan, admin_user_id),
+        )
 
     c.execute("SELECT id FROM businesses WHERE owner_user_id = ?", (admin_user_id,))
     owned = c.fetchone()
