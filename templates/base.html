@@ -65,6 +65,7 @@
       width: 100%;
       max-width: 980px;
       margin: 0 auto;
+      padding-top: 1.5rem;
     }
 
     .tc-card {
@@ -73,12 +74,15 @@
       border: 1px solid rgba(148, 163, 184, 0.5);
       background: #ffffff;
       box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+      overflow: hidden;
+      margin-top: 0.75rem;
     }
 
     body.dark .tc-card {
       background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.3) 0, rgba(15, 23, 42, 0.98) 55%);
       border-color: rgba(30, 64, 175, 0.65);
       box-shadow: 0 28px 80px rgba(15, 23, 42, 0.85);
+      overflow: hidden;
     }
 
     .tc-btn-primary {
@@ -946,6 +950,67 @@
           eye.addEventListener("mouseleave", () => hidePassword());
           eye.addEventListener("touchend", () => hidePassword());
           eye.addEventListener("touchcancel", () => hidePassword());
+      });
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const passwordInput = document.getElementById("password");
+      const strengthText = document.getElementById("password-strength-text");
+      const strengthLabel = document.getElementById("password-strength-label");
+      const strengthFill = document.getElementById("pw-strength-fill");
+      const rulesList = document.getElementById("password-rules");
+
+      if (!passwordInput || !strengthText || !rulesList) {
+        return;
+      }
+
+      const ruleItems = rulesList.querySelectorAll("li[data-rule]");
+
+      function updateStrength(value) {
+        const checks = {
+          length: value.length >= 8,
+          upper: /[A-Z]/.test(value),
+          lower: /[a-z]/.test(value),
+          digit: /[0-9]/.test(value),
+          special: /[^A-Za-z0-9]/.test(value)
+        };
+
+        const met = Object.values(checks).filter(Boolean).length;
+        let status = "Too weak";
+        let color = "#ef4444";
+        if (met >= 4 && value.length >= 10) {
+          status = "Strong";
+          color = "#22c55e";
+        } else if (met >= 3 && value.length >= 8) {
+          status = "Medium";
+          color = "#f59e0b";
+        }
+
+        if (strengthLabel) {
+          strengthLabel.textContent = status;
+        } else {
+          strengthText.textContent = "Password strength: " + status;
+        }
+
+        if (strengthFill) {
+          const width = Math.min(100, met * 20 + (value.length > 12 ? 10 : 0));
+          strengthFill.style.width = width + "%";
+          strengthFill.style.background = color;
+        }
+
+        ruleItems.forEach((item) => {
+          const key = item.getAttribute("data-rule");
+          const ok = key && checks[key];
+          item.classList.toggle("text-emerald-500", !!ok);
+          item.classList.toggle("dark:text-emerald-300", !!ok);
+          item.classList.toggle("text-slate-500", !ok);
+          item.classList.toggle("dark:text-slate-400", !ok);
+        });
+      }
+
+      updateStrength(passwordInput.value || "");
+      passwordInput.addEventListener("input", function (e) {
+        updateStrength(e.target.value || "");
       });
     });
 
