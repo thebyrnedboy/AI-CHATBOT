@@ -189,6 +189,9 @@
         Cancel any time during your 7-day free trial on this billing page and you <strong>will not be charged</strong>.
       </div>
     </div>
+    <form method="POST" action="{{ url_for('create_checkout_session') }}" style="margin: 0 0 1rem;">
+      <button type="submit" class="primary">Start 7-day free trial</button>
+    </form>
   {% else %}
     <div
       class="plan-summary"

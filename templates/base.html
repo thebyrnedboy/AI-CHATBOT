@@ -548,14 +548,21 @@
       {% else %}
         <a href="{{ url_for('index') }}" class="tab-link{% if request.endpoint in ['index', 'marketing'] %} tab-link-active{% endif %}">Home</a>
         <a href="{{ url_for('login') }}" class="tab-link{% if request.endpoint in ['login'] %} tab-link-active{% endif %}">Login</a>
-        <a href="{{ url_for('register') }}" class="tab-link{% if request.endpoint in ['register'] %} tab-link-active{% endif %}">Start free trial</a>
+        <a href="{{ url_for('register') }}" class="tab-link{% if request.endpoint in ['register'] %} tab-link-active{% endif %}">Register</a>
       {% endif %}
     </nav>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
+          <div class="flash {{ category }}">
+            {% if category == "locked" %}
+              {% set linked_message = message.replace("7-day free trial", "<a href='" ~ url_for('billing') ~ "' class='underline'>7-day free trial</a>") %}
+              {{ linked_message|safe }}
+            {% else %}
+              {{ message }}
+            {% endif %}
+          </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
