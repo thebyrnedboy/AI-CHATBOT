@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/theochat-logo-mark.png') }}">
   <link rel="shortcut icon" href="{{ url_for('static', filename='img/theochat-logo-mark.png') }}">
   <style>
@@ -261,20 +263,23 @@
     .tc-code-box {
       position: relative;
       border-radius: 1rem;
-      padding: 0.9rem 1rem;
+      padding: 1rem;
       margin-top: 0.5rem;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
       overflow-x: auto;
       border: 1px solid rgba(148, 163, 184, 0.35);
       background: #0b1120;
       color: #e5e7eb;
+      max-height: none;
+      overflow-y: auto;
     }
 
     .tc-shell:not(.dark) .tc-code-block,
     .tc-shell:not(.dark) .tc-code-box {
-      background: #0f172a;
-      color: #f9fafb;
+      background: #f8fafc;
+      color: #0f172a;
+      border-color: rgba(148, 163, 184, 0.5);
     }
 
     .dark .tc-code-block,
