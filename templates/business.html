@@ -103,7 +103,7 @@
     <div class="label">API key</div>
     <div class="row" style="justify-content:space-between;">
       <div class="mono" id="api-key" style="flex:1;">{{ biz.api_key }}</div>
-      <button id="copy-key" type="button" class="primary">Copy</button>
+      <button id="copy-key" type="button" class="primary" data-copy-target="#api-key">Copy</button>
     </div>
     <form method="post" action="{{ url_for('regenerate_key') }}" style="margin-top:0.6rem;">
       <button type="submit" class="danger">Regenerate key</button>
@@ -121,14 +121,12 @@
     <button id="generate-snippet" type="button" class="primary">Generate embed snippet</button>
     <div id="snippet-block" style="display:none;margin-top:0.6rem;">
       <pre id="embed-snippet" style="margin:0;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:0.75rem;overflow:auto;font-size:0.9rem;">
-<code><script
-  src="{{ base_url }}/embed.js"
-  data-api-key="{{ biz.api_key }}"
-  data-base-url="{{ base_url }}"
+<code id="embed-snippet-business"><script
+  src="https://theochat.co.uk/embed.js?api_key={{ biz.api_key }}"
   async
 ></script></code></pre>
       <div class="row" style="margin-top:0.5rem;gap:0.5rem;">
-        <button id="copy-snippet" type="button" class="primary">Copy embed snippet</button>
+        <button id="copy-snippet" type="button" class="primary" data-copy-target="#embed-snippet-business">Copy embed snippet</button>
         <button id="test-widget" type="button">Open test page</button>
       </div>
       <div class="muted" style="margin-top:0.4rem;">
@@ -307,9 +305,7 @@
 <script>
 (function() {
   const keyEl = document.getElementById("api-key");
-  const copyKeyBtn = document.getElementById("copy-key");
-  const copySnippetBtn = document.getElementById("copy-snippet");
-  const snippetEl = document.getElementById("embed-snippet");
+  const snippetEl = document.getElementById("embed-snippet-business");
   const testBtn = document.getElementById("test-widget");
   const knowledgeForm = document.getElementById("knowledge-form");
   const knowledgeStatus = document.getElementById("knowledge-status");
@@ -334,44 +330,6 @@
   const planForm = document.getElementById("plan-form");
   const planStatus = document.getElementById("plan-status");
 
-  function copyText(text) {
-    if (!text) return;
-    navigator.clipboard.writeText(text).catch(() => {});
-  }
-
-  if (copyKeyBtn && keyEl) {
-    copyKeyBtn.addEventListener("click", () => copyText(keyEl.textContent.trim()));
-  }
-  if (copySnippetBtn && snippetEl) {
-    copySnippetBtn.addEventListener("click", () => {
-      const text = snippetEl.innerText.trim();
-      const original = copySnippetBtn.textContent;
-      const fallbackCopy = () => {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => {
-          copySnippetBtn.textContent = "Copied!";
-          setTimeout(() => { copySnippetBtn.textContent = original; }, 1500);
-        }).catch(() => {
-          fallbackCopy();
-          copySnippetBtn.textContent = "Copied!";
-          setTimeout(() => { copySnippetBtn.textContent = original; }, 1500);
-        });
-      } else {
-        fallbackCopy();
-        copySnippetBtn.textContent = "Copied!";
-        setTimeout(() => { copySnippetBtn.textContent = original; }, 1500);
-      }
-    });
-  }
   if (testBtn && snippetEl) {
     testBtn.addEventListener("click", () => {
       const snippet = snippetEl.innerText.trim();

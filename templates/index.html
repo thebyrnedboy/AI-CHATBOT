@@ -511,11 +511,23 @@
     <h3>Embed on your site</h3>
     {% if embed_available %}
       <p>Paste this snippet before &lt;/body&gt; or in your tag manager.</p>
-      <div class="snippet" id="embed-snippet">
-        &lt;script src="/embed.js?api_key={{ api_key }}" async&gt;&lt;/script&gt;
+      <div class="relative" style="position:relative;">
+        <pre style="background:#0f172a;color:#e5e7eb;border-radius:8px;padding:0.75rem;overflow:auto;font-family:Menlo, Consolas, monospace;font-size:0.9rem;margin:0;">
+<code id="embed-snippet-dashboard"><script
+  src="https://theochat.co.uk/embed.js?api_key={{ api_key }}"
+  async
+></script></code>
+        </pre>
+        <button
+          type="button"
+          class="primary"
+          style="position:absolute;top:8px;right:8px;padding:0.3rem 0.6rem;font-size:0.8rem;"
+          data-copy-target="#embed-snippet-dashboard"
+        >
+          Copy
+        </button>
       </div>
       <div style="display:flex;gap:0.65rem;align-items:center;margin-top:0.5rem;flex-wrap:wrap;">
-        <button type="button" class="primary" id="copy-snippet-btn" style="padding:0.4rem 0.75rem;font-size:0.9rem;">Copy snippet</button>
         <a href="{{ url_for('setup') }}" style="font-size:0.9rem;color:#2563eb;text-decoration:none;">
           Need help adding this to your website? Click here
         </a>
@@ -533,8 +545,6 @@ const send = document.getElementById("send");
 const uploadZone = document.getElementById("upload-zone");
 const fileInput = document.getElementById("file-input");
 const labelInput = document.getElementById("upload-label");
-const copySnippetBtn = document.getElementById("copy-snippet-btn");
-const embedSnippetEl = document.getElementById("embed-snippet");
 const websiteUrlInput = document.getElementById("website-url-input");
 const websiteImportButton = document.getElementById("website-import-button");
 const hasImportedWebsiteUrl = "{{ 'true' if imported_website_url else 'false' }}";
@@ -695,21 +705,7 @@ if (contactCheckbox) {
 }
 
 // Copy embed snippet helper
-if (copySnippetBtn && embedSnippetEl) {
-  copySnippetBtn.addEventListener("click", async () => {
-    const text = embedSnippetEl.textContent || "";
-    try {
-      await navigator.clipboard.writeText(text.trim());
-      copySnippetBtn.textContent = "Copied!";
-      setTimeout(() => { copySnippetBtn.textContent = "Copy snippet"; }, 1500);
-    } catch (e) {
-      copySnippetBtn.textContent = "Copy failed";
-      setTimeout(() => { copySnippetBtn.textContent = "Copy snippet"; }, 1500);
-    }
-  });
-}
 </script>
 
 {% endblock %}
-
 

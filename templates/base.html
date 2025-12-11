@@ -567,6 +567,18 @@
       {% endif %}
     {% endwith %}
 
+    {% if current_user.is_authenticated and (current_user.has_active_subscription or current_user.is_subscribed) and api_key %}
+      <div style="margin:0.75rem 0; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; border:1px solid var(--border); border-radius:8px; padding:0.55rem 0.75rem; background: #f8fafc; font-size:0.85rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem; min-width:0;">
+          <span style="font-weight:600;">API key:</span>
+          <span id="global-api-key" style="font-family: Consolas, Menlo, monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">{{ api_key }}</span>
+        </div>
+        <button type="button" class="text-xs" data-copy-target="#global-api-key" style="font-size:0.75rem; padding:0.3rem 0.55rem; border-radius:6px; border:1px solid var(--border); background:#fff; cursor:pointer;">
+          Copy
+        </button>
+      </div>
+    {% endif %}
+
     <main>
       {% block content %}{% endblock %}
     </main>
@@ -661,6 +673,48 @@
       });
     });
 
+  </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      function getCopyText(targetSelector) {
+        var el = document.querySelector(targetSelector);
+        if (!el) return null;
+        if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+          return el.value;
+        }
+        return el.textContent;
+      }
+
+      document.querySelectorAll("[data-copy-target]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var target = btn.getAttribute("data-copy-target");
+          if (!target) return;
+          var text = getCopyText(target);
+          if (!text) return;
+
+          var original = btn.textContent;
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () {
+              if (original !== null) {
+                btn.textContent = "Copied!";
+                setTimeout(function () { btn.textContent = original; }, 1500);
+              }
+            }).catch(function () {});
+          } else {
+            var temp = document.createElement("textarea");
+            temp.value = text;
+            temp.style.position = "fixed";
+            temp.style.opacity = "0";
+            document.body.appendChild(temp);
+            temp.focus();
+            temp.select();
+            try { document.execCommand("copy"); } catch (e) {}
+            document.body.removeChild(temp);
+          }
+        });
+      });
+    });
   </script>
 </body>
 </html>

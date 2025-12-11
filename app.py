@@ -1457,6 +1457,9 @@ def knowledge():
     user_id = int(current_user.id)
     biz_id = int(current_user.business_id)
 
+    biz = get_business_for_user(user_id)
+    api_key = biz["api_key"] if biz else None
+
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
@@ -1480,6 +1483,7 @@ def knowledge():
         "knowledge.html",
         email=current_user.email,
         items=rows,
+        api_key=api_key,
     )
 
 
@@ -1513,6 +1517,8 @@ def contact_requests():
     Simple dashboard view of contact requests for the current user's business.
     """
     biz_id = int(current_user.business_id)
+    biz = get_business_for_user(int(current_user.id))
+    api_key = biz["api_key"] if biz else None
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -1534,6 +1540,7 @@ def contact_requests():
         is_subscribed=current_user.is_subscribed,
         trial_status=current_user.trial_status,
         requests=rows,
+        api_key=api_key,
     )
 
 
@@ -2152,6 +2159,8 @@ def billing():
         except Exception as e:
             print("Stripe retrieve subscription error:", e)
             subscription_info = None
+    biz = get_business_for_user(int(current_user.id))
+    api_key = biz["api_key"] if biz else None
     return render_template(
         "billing.html",
         email=current_user.email,
@@ -2160,6 +2169,7 @@ def billing():
         has_stripe_customer=current_user.has_stripe_customer if hasattr(current_user, "has_stripe_customer") else False,
         stripe_configured=configured,
         subscription_info=subscription_info,
+        api_key=api_key,
     )
 
 @app.get("/setup")
