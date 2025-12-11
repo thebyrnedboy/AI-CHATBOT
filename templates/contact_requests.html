@@ -1,47 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page">
-  <div class="header-row" style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
-    <div>
-      <h2 style="margin:0;">Contact requests</h2>
-      <p style="margin:0;color:#6b7280;font-size:0.9rem;">Messages sent via your TheoChat widget's "Contact us" form.</p>
-    </div>
+<div class="space-y-3">
+  <div>
+    <h1 class="text-xl font-semibold mb-1">Contact requests</h1>
+    <p class="text-sm text-slate-600 dark:text-slate-400">Messages sent via your TheoChat widget's "Contact us" form.</p>
   </div>
 
-  {% if requests %}
-    <div style="overflow-x:auto;">
-      <table class="table" style="width:100%;border-collapse:collapse;font-size:0.95rem;">
-        <thead>
-          <tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
-            <th style="padding:0.5rem;">When</th>
-            <th style="padding:0.5rem;">Source</th>
-            <th style="padding:0.5rem;">Visitor name</th>
-            <th style="padding:0.5rem;">Visitor email</th>
-            <th style="padding:0.5rem;">Message</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for r in requests %}
-          <tr style="border-bottom:1px solid #e5e7eb;">
-            <td style="padding:0.5rem;">{{ r["created_at"] }}</td>
-            <td style="padding:0.5rem;">{{ r["source"] or "widget" }}</td>
-            <td style="padding:0.5rem;">{{ r["visitor_name"] or "-" }}</td>
-            <td style="padding:0.5rem;">
-              {% if r["visitor_email"] %}
-                <a href="mailto:{{ r['visitor_email'] }}">{{ r["visitor_email"] }}</a>
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td style="padding:0.5rem;max-width:420px;white-space:pre-wrap;">{{ r["message"] }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p style="margin:0;color:#6b7280;">No contact requests yet.</p>
-  {% endif %}
+  <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+    {% if requests %}
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="text-left border-b border-slate-200 dark:border-slate-800">
+              <th class="py-2 px-2">When</th>
+              <th class="py-2 px-2">Source</th>
+              <th class="py-2 px-2">Visitor name</th>
+              <th class="py-2 px-2">Visitor email</th>
+              <th class="py-2 px-2">Message</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in requests %}
+            <tr class="border-b border-slate-100 dark:border-slate-800">
+              <td class="py-2 px-2 whitespace-nowrap">{{ r["created_at"] }}</td>
+              <td class="py-2 px-2">{{ r["source"] or "widget" }}</td>
+              <td class="py-2 px-2">{{ r["visitor_name"] or "-" }}</td>
+              <td class="py-2 px-2">
+                {% if r["visitor_email"] %}
+                  <a href="mailto:{{ r['visitor_email'] }}">{{ r["visitor_email"] }}</a>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="py-2 px-2 max-w-[420px] whitespace-pre-wrap">{{ r["message"] }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-sm text-slate-600 dark:text-slate-400">No contact requests yet.</p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

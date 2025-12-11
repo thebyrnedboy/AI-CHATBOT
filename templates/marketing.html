@@ -12,44 +12,12 @@
     gap: 1.5rem;
   }
 
-  .marketing-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .marketing-nav a {
-    margin-left: 0.75rem;
-    text-decoration: none;
-    font-size: 0.95rem;
-    color: #4b5563;
-  }
-
-  .marketing-nav a.nav-link-primary {
-    padding: 0.45rem 0.9rem;
-    border-radius: 999px;
-    background: #2563eb;
-    color: #fff;
-    border: 1px solid #2563eb;
-  }
-
   .hero {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.25rem;
     align-items: center;
     padding: 1.25rem;
-  }
-
-  .hero h1 {
-    margin: 0 0 0.35rem;
-    font-size: 2.2rem;
-  }
-
-  .hero p {
-    margin: 0 0 0.9rem;
-    color: var(--muted);
   }
 
   .hero-actions {
@@ -63,24 +31,6 @@
     margin: 0.25rem 0 0;
     color: #6b7280;
     font-size: 0.9rem;
-  }
-
-  .btn-primary {
-    padding: 0.55rem 1.15rem;
-    border-radius: 10px;
-    background: #2563eb;
-    color: #fff;
-    border: 1px solid #2563eb;
-    text-decoration: none;
-  }
-
-  .btn-ghost {
-    padding: 0.55rem 1.15rem;
-    border-radius: 10px;
-    background: transparent;
-    color: #2563eb;
-    border: 1px solid #2563eb;
-    text-decoration: none;
   }
 
   .hero-chat-preview {
@@ -125,49 +75,13 @@
     color: #e5e7eb;
   }
 
-  .feature-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-    margin-top: 0.75rem;
-  }
-
-  .feature-card {
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    border-radius: 12px;
-    padding: 1rem;
-    background: #f9fafb;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-  }
-
-  body.dark .feature-card {
-    background: #0b1224;
-    border-color: #1f2937;
-    box-shadow: none;
-  }
-
-  .how-section, .cta-final {
-    text-align: center;
-  }
-
-  .steps {
-    list-style: decimal;
-    text-align: left;
-    max-width: 720px;
-    margin: 0.75rem auto 0;
-    padding-left: 1.25rem;
-    color: #4b5563;
-    line-height: 1.5;
-  }
-
-  .why-list {
+  .why-list, .testimonials {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 0.75rem;
-    margin-top: 0.5rem;
   }
 
-  .why-card {
+  .why-card, .testimonial {
     border-radius: 10px;
     padding: 0.85rem 0.95rem;
     border: 1px solid rgba(148, 163, 184, 0.4);
@@ -175,83 +89,22 @@
     font-size: 0.95rem;
   }
 
-  body.dark .why-card {
+  body.dark .why-card, body.dark .testimonial {
     background: #0b1224;
     border-color: #1f2937;
-  }
-
-  .testimonials {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-  }
-
-  .testimonial {
-    border-radius: 10px;
-    padding: 0.85rem 0.95rem;
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    background: #f9fafb;
-    font-size: 0.95rem;
-  }
-
-  body.dark .testimonial {
-    background: #0b1224;
-    border-color: #1f2937;
-  }
-
-  .card {
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: var(--card);
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-  }
-
-  body.dark .card {
-    border-color: #1f2937;
-    background: #020617;
-    box-shadow: none;
-  }
-
-  body.dark .marketing-nav a {
-    color: #e5e7eb;
-  }
-
-  body.dark .marketing-nav a.nav-link-primary {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #ffffff;
-  }
-
-  @media (max-width: 640px) {
-    .hero-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .hero-actions .btn-primary,
-    .hero-actions .btn-ghost {
-      width: 100%;
-      text-align: center;
-    }
   }
 </style>
 
-<div class="marketing-page">
-  <div class="marketing-header">
-    <div class="marketing-logo">
-      <a href="{{ url_for('marketing') }}" class="logo-link"></a>
-    </div>
-  </div>
-
-  <section class="hero card">
+<div class="marketing-page space-y-6">
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 hero">
     <div class="hero-layout">
       <div class="hero-content-block">
-        <h1>TheoChat</h1>
-        <p><strong>Meet Theo - your website's new AI assistant.</strong></p>
-        <p>Answer questions, capture leads, and assist customers 24/7 with a smart AI trained on your business.</p>
+        <h1 class="text-3xl font-bold mb-2">TheoChat</h1>
+        <p class="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2">Meet Theo - your website's new AI assistant.</p>
+        <p class="text-slate-600 dark:text-slate-300">Answer questions, capture leads, and assist customers 24/7 with a smart AI trained on your business.</p>
         <div class="hero-actions">
-          <a href="{{ url_for('register') }}" class="btn-primary">Start free 7-day trial</a>
-          <a href="{{ url_for('login') }}" class="btn-ghost">Already have an account?</a>
+          <a href="{{ url_for('register') }}" class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 border border-blue-600">Start free 7-day trial</a>
+          <a href="{{ url_for('login') }}" class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium border border-blue-600 text-blue-700 hover:bg-blue-50 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800">Already have an account?</a>
         </div>
         <p class="hero-note">No long-term contract. Cancel anytime.</p>
       </div>
@@ -266,17 +119,17 @@
     </div>
   </section>
 
-  <section class="card how-section">
-    <h2 style="margin:0 0 0.35rem;">How it works</h2>
-    <ol class="steps">
-      <li><strong>Add your business info</strong> — Upload documents, FAQs, and service details. Theo learns from your content.</li>
-      <li><strong>Paste one small code snippet</strong> — Install the TheoChat widget on any website in under 30 seconds.</li>
-      <li><strong>Theo assists your visitors</strong> — Visitors get fast, accurate answers based on your own content, 24/7.</li>
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-semibold mb-2">How it works</h2>
+    <ol class="steps text-sm text-slate-700 dark:text-slate-300">
+      <li><strong>Add your business info</strong> – Upload documents, FAQs, and service details. Theo learns from your content.</li>
+      <li><strong>Paste one small code snippet</strong> – Install the TheoChat widget on any website in under 30 seconds.</li>
+      <li><strong>Theo assists your visitors</strong> – Visitors get fast, accurate answers based on your own content, 24/7.</li>
     </ol>
   </section>
 
-  <section class="card">
-    <h2 style="margin:0 0 0.35rem;">Why TheoChat?</h2>
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-semibold mb-2">Why TheoChat?</h2>
     <div class="why-list">
       <div class="why-card"><strong>Instant setup</strong> – No developers required. TheoChat is ready in minutes.</div>
       <div class="why-card"><strong>Knows your business</strong> – Theo uses your documents and website content to answer accurately.</div>
@@ -287,19 +140,19 @@
     </div>
   </section>
 
-  <section class="card">
-    <h2 style="margin:0 0 0.35rem;text-align:center;">Testimonials</h2>
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
+    <h2 class="text-xl font-semibold mb-2 text-center">Testimonials</h2>
     <div class="testimonials">
-      <div class="testimonial">“TheoChat reduced our support emails by 40% in the first week.”<br><em>— Local business owner</em></div>
-      <div class="testimonial">“Finally, a chatbot that actually understands our services.”<br><em>— Agency founder</em></div>
+      <div class="testimonial">“TheoChat reduced our support emails by 40% in the first week.”<br><em>– Local business owner</em></div>
+      <div class="testimonial">“Finally, a chatbot that actually understands our services.”<br><em>– Agency founder</em></div>
     </div>
   </section>
 
-  <section class="card cta-final" style="text-align:center;">
-    <h2 style="margin:0 0 0.4rem;">Ready to put TheoChat to work for you?</h2>
-    <p style="margin:0 0 0.65rem;color:#6b7280;">Get started in minutes. No code, no complex setup.</p>
-    <a href="{{ url_for('register') }}" class="btn-primary">Create your account</a>
-    <p class="hero-note" style="margin-top:0.5rem;">Meet Theo — your website’s new AI assistant.</p>
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 text-center">
+    <h2 class="text-xl font-semibold mb-2">Ready to put TheoChat to work for you?</h2>
+    <p class="text-slate-600 dark:text-slate-400 mb-2">Get started in minutes. No code, no complex setup.</p>
+    <a href="{{ url_for('register') }}" class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 border border-blue-600">Create your account</a>
+    <p class="hero-note" style="margin-top:0.5rem;">Meet Theo – your website’s new AI assistant.</p>
   </section>
 </div>
 

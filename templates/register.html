@@ -1,84 +1,66 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-card">
-    <h2 style="margin:0 0 0.5rem;">Create a TheoChat account</h2>
-    <p style="margin:0 0 1rem;color:var(--muted);">Spin up your TheoChat workspace.</p>
-    <div style="max-width:420px;margin:0 auto;">
-      <div style="padding:1.25rem;border:1px solid var(--border);border-radius:10px;background:var(--card);">
-        <form method="post" action="{{ url_for('register') }}" style="margin:0;">
-          <label style="display:block;margin-bottom:0.85rem;font-size:0.95rem;">
-            <span style="display:block;margin-bottom:0.35rem;">Email</span>
-            <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"/>
-          </label>
-          <label style="display:block;margin-bottom:0.85rem;font-size:0.95rem;">
-            <span style="display:block;margin-bottom:0.35rem;">Password</span>
-            <div class="password-wrapper">
-              <input type="password" name="password" id="password" required autocomplete="new-password" style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"/>
-              <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye" alt="Show password">
-            </div>
-            <div style="margin-top:0.4rem;">
-              <div id="pw-strength-bar" style="height:6px;border-radius:6px;overflow:hidden;background:#e5e7eb;">
-                <div id="pw-strength-fill" style="height:100%;width:5%;background:#ef4444;"></div>
-              </div>
-              <div id="pw-strength-text" style="margin-top:0.35rem;font-size:0.8rem;color:#6b7280;">
-                Password strength: <span id="pw-strength-label">Too weak</span>
-              </div>
-              <div style="margin-top:0.25rem;font-size:0.78rem;color:#9ca3af;">
-                Must be at least 8 characters and include uppercase, lowercase, a number, and a special character.
-              </div>
-            </div>
-            <div class="mt-3 text-xs text-gray-500" style="margin-top:0.75rem;font-size:0.82rem;color:#6b7280;">
-              <div class="font-medium mb-1" style="font-weight:600;margin-bottom:0.35rem;">Password must include:</div>
-              <ul class="space-y-1" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.35rem;">
-                <li id="pw-rule-length" class="flex items-center gap-2" style="display:flex;align-items:center;gap:0.4rem;color:#6b7280;">
-                  <span class="pw-rule-icon">✘</span>
-                  <span>At least 8 characters</span>
-                </li>
-                <li id="pw-rule-upper" class="flex items-center gap-2" style="display:flex;align-items:center;gap:0.4rem;color:#6b7280;">
-                  <span class="pw-rule-icon">✘</span>
-                  <span>At least one uppercase letter (A–Z)</span>
-                </li>
-                <li id="pw-rule-lower" class="flex items-center gap-2" style="display:flex;align-items:center;gap:0.4rem;color:#6b7280;">
-                  <span class="pw-rule-icon">✘</span>
-                  <span>At least one lowercase letter (a–z)</span>
-                </li>
-                <li id="pw-rule-digit" class="flex items-center gap-2" style="display:flex;align-items:center;gap:0.4rem;color:#6b7280;">
-                  <span class="pw-rule-icon">✘</span>
-                  <span>At least one number (0–9)</span>
-                </li>
-                <li id="pw-rule-special" class="flex items-center gap-2" style="display:flex;align-items:center;gap:0.4rem;color:#6b7280;">
-                  <span class="pw-rule-icon">✘</span>
-                  <span>At least one special character (!@#$%^&amp;* etc.)</span>
-                </li>
-              </ul>
-            </div>
-          </label>
-          <div style="margin-top:0.75rem;margin-bottom:0.85rem;font-size:0.95rem;">
-            <label for="confirm_password" style="display:block;margin-bottom:0.35rem;">Confirm password</label>
-            <div class="password-wrapper">
-              <input
-                type="password"
-                name="confirm_password"
-                id="confirm_password"
-                required
-                autocomplete="new-password"
-                style="display:block;width:100%;padding:0.5rem;border-radius:6px;border:1px solid #d1d5db;"
-              />
-              <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye" alt="Show password">
-            </div>
-            <div id="pw-match-text" style="margin-top:0.35rem;font-size:0.8rem;color:#6b7280;">
-            </div>
+<div class="max-w-md mx-auto space-y-4">
+  <div>
+    <h2 class="text-xl font-semibold mb-1">Create a TheoChat account</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400">Spin up your TheoChat workspace.</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+    <form method="post" action="{{ url_for('register') }}" class="space-y-4">
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span class="mb-1 block">Email</span>
+        <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+      </label>
+      <label class="block text-sm font-medium text-slate-700 dark:text-slate-200 space-y-2">
+        <span class="mb-1 block">Password</span>
+        <div class="password-wrapper">
+          <input type="password" name="password" id="password" required autocomplete="new-password" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye" alt="Show password">
+        </div>
+        <div class="space-y-2 text-xs text-slate-500 dark:text-slate-400">
+          <div id="pw-strength-bar" class="h-1.5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800">
+            <div id="pw-strength-fill" style="height:100%;width:5%;background:#ef4444;"></div>
           </div>
-          <div style="text-align:center;">
-            <button class="primary" type="submit" style="padding:0.5rem 1rem;border-radius:6px;background:#2563eb;color:#fff;border:1px solid #2563eb;display:inline-block;">Create account</button>
+          <div id="pw-strength-text" class="text-slate-600 dark:text-slate-300 text-xs">
+            Password strength: <span id="pw-strength-label">Too weak</span>
           </div>
-        </form>
-        <p style="margin:0.9rem 0 0;font-size:0.9rem;color:var(--muted);text-align:center;">
-          Already have an account? <a href="{{ url_for('login') }}">Log in</a>
-        </p>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400">
+            Must be at least 8 characters and include uppercase, lowercase, a number, and a special character.
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+            <div class="font-semibold">Password must include:</div>
+            <ul class="space-y-1 list-none m-0 p-0">
+              <li id="pw-rule-length" class="flex items-center gap-2 text-slate-600 dark:text-slate-300"><span class="pw-rule-icon">●</span><span>At least 8 characters</span></li>
+              <li id="pw-rule-upper" class="flex items-center gap-2 text-slate-600 dark:text-slate-300"><span class="pw-rule-icon">●</span><span>At least one uppercase letter (A-Z)</span></li>
+              <li id="pw-rule-lower" class="flex items-center gap-2 text-slate-600 dark:text-slate-300"><span class="pw-rule-icon">●</span><span>At least one lowercase letter (a-z)</span></li>
+              <li id="pw-rule-digit" class="flex items-center gap-2 text-slate-600 dark:text-slate-300"><span class="pw-rule-icon">●</span><span>At least one number (0-9)</span></li>
+              <li id="pw-rule-special" class="flex items-center gap-2 text-slate-600 dark:text-slate-300"><span class="pw-rule-icon">●</span><span>At least one special character (!@#$%^&amp;* etc.)</span></li>
+            </ul>
+          </div>
+        </div>
+      </label>
+      <div class="space-y-2 text-sm">
+        <label for="confirm_password" class="block text-sm font-medium text-slate-700 dark:text-slate-200">Confirm password</label>
+        <div class="password-wrapper">
+          <input
+            type="password"
+            name="confirm_password"
+            id="confirm_password"
+            required
+            autocomplete="new-password"
+            class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <img src="{{ url_for('static', filename='img/eye-closed.svg') }}" class="password-eye" alt="Show password">
+        </div>
+        <div id="pw-match-text" class="text-xs text-slate-600 dark:text-slate-400"></div>
       </div>
-    </div>
+      <div class="text-center">
+        <button class="primary inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 border border-blue-600" type="submit">Create account</button>
+      </div>
+    </form>
+    <p class="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">
+      Already have an account? <a href="{{ url_for('login') }}" class="underline">Log in</a>
+    </p>
   </div>
 </div>
 <script src="{{ url_for('static', filename='js/password_strength.js') }}"></script>
