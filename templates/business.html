@@ -13,6 +13,7 @@
     padding: 0.9rem;
     background: var(--card);
     position: relative;
+    box-shadow: 0 8px 18px rgba(15,23,42,0.06);
   }
   .label {
     font-size: 0.85rem;
@@ -60,6 +61,7 @@
     border-radius: 999px;
     border: 1px solid var(--border);
     font-size: 0.85rem;
+    background: var(--card);
   }
   .list {
     list-style: disc;
@@ -77,6 +79,22 @@
   .small {
     font-size: 0.85rem;
   }
+
+  .icon-button {
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 0.3rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .icon-button:hover {
+    background: rgba(37, 99, 235, 0.08);
+    border-color: #2563eb;
+  }
 </style>
 
 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
@@ -85,7 +103,7 @@
     <div class="muted">Configure your TheoChat embed and business profile.</div>
   </div>
   <div style="display:flex;align-items:center;gap:0.5rem;">
-    <a href="{{ url_for('index') }}" class="pill-plan" style="text-decoration:none;">← Back to home</a>
+    <a href="{{ url_for('index') }}" class="pill-plan" style="text-decoration:none;">&larr; Back to home</a>
     {% if biz %}
       <div class="pill-plan">Plan: {{ current_user.plan|default('starter')|capitalize }}</div>
     {% endif %}
@@ -130,8 +148,8 @@
           id="copy-snippet"
           type="button"
           aria-label="Copy embed snippet"
-          class="absolute top-2 right-2 inline-flex items-center justify-center rounded-md"
-          style="border:1px solid var(--border);background:#fff;padding:0.25rem;"
+          class="icon-button"
+          style="position:absolute;top:0.5rem;right:0.5rem;"
           data-copy-target="#embed-snippet-business"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

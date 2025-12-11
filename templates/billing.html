@@ -2,84 +2,136 @@
 {% block content %}
 
 <style>
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
   .billing-header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .status-pill {
     font-size: 0.85rem;
-    padding: 0.35rem 0.7rem;
+    padding: 0.35rem 0.8rem;
     border-radius: 999px;
-    border: 1px solid #e5e7eb;
-    background: #f9fafb;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
   }
 
-  body.dark .status-pill {
-    border-color: #1f2937;
-    background: #020617;
-  }
-
-  .subscription-panel {
-    border: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
-
-  body.dark .subscription-panel {
-    border-color: #1f2937;
-    background: #020617;
-  }
-
-  .subscription-panel p,
-  .subscription-panel h3 {
-    color: #111827;
-  }
-
-  body.dark .subscription-panel p,
-  body.dark .subscription-panel h3 {
-    color: #e5e7eb;
-  }
-
-  /* Dark mode overrides for billing cards/alerts */
-  body.dark .plan-summary {
-    background: #0b1120;
-    border-color: #1f2937;
-    color: #e5e7eb;
-  }
-
-  body.dark .plan-summary p,
-  body.dark .plan-summary div {
-    color: #e5e7eb;
+  .billing-trial-banner {
+    margin-bottom: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.9rem;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #1e3a8a;
+    font-size: 0.95rem;
+    border: 1px solid #bfdbfe;
+    box-shadow: 0 8px 18px rgba(15,23,42,0.06);
   }
 
   body.dark .billing-trial-banner {
+    background: linear-gradient(135deg, #0b1224 0%, #111827 100%);
+    color: #c7d2fe;
+    border-color: #1f2937;
+  }
+
+  .plan-summary,
+  .card,
+  .subscription-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 8px 18px rgba(15,23,42,0.06);
+  }
+
+  .plan-summary {
+    margin-bottom: 1rem;
+  }
+
+  .plan-summary .headline {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .plan-summary .price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .alert {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.92rem;
+  }
+
+  .alert-success {
+    background: #ecfdf3;
+    color: #166534;
+    border-color: #bbf7d0;
+  }
+
+  .alert-info {
+    background: #e0f2fe;
+    color: #075985;
+    border-color: #bae6fd;
+  }
+
+  body.dark .alert-success {
+    background: #0f172a;
+    color: #dcfce7;
+    border-color: #1f2937;
+  }
+
+  body.dark .alert-info {
     background: #0b1224;
     color: #c7d2fe;
-    border: 1px solid #1f2937;
-  }
-
-  body.dark .card {
-    background: #0b1120;
     border-color: #1f2937;
   }
 
-  body.dark .alert {
-    color: #e5e7eb;
-    border-color: #1f2937;
+  .card h3 {
+    margin: 0 0 0.35rem;
   }
 
-  body.dark .alert.alert-success {
-    background: #0f172a;
+  .card p {
+    margin: 0 0 0.5rem;
+    color: var(--muted);
   }
 
-  body.dark .alert.alert-info {
-    background: #0b1224;
+  .flash-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.35);
+    z-index: 9999;
   }
 
-  /* Flash modal dark mode */
+  .flash-modal {
+    background: #ffffff;
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    font-size: 0.95rem;
+  }
+
   body.dark .flash-overlay {
     background: rgba(0,0,0,0.6);
   }
@@ -89,22 +141,13 @@
     color: #e5e7eb;
     box-shadow: 0 10px 30px rgba(0,0,0,0.35);
   }
-
-  body.dark .flash-modal button {
-    background: #2563eb;
-    color: #fff;
-    border: none;
-  }
 </style>
 
 <div class="page">
   {% if not current_user.has_active_subscription %}
-    <div
-      class="billing-trial-banner"
-      style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 0.5rem; background: #eff6ff; color: #1e3a8a; font-size: 0.9rem;"
-    >
+    <div class="billing-trial-banner">
       <strong>Start your free trial to access Pro features.</strong>
-      <span style="display:block; margin-top: 0.25rem;">
+      <span style="display:block; margin-top: 0.35rem;">
         Unlock the dashboard, setup tools, contact requests, and live TheoChat widget by starting your 7-day free trial.
       </span>
     </div>
@@ -112,16 +155,10 @@
 
   {% with messages = get_flashed_messages(with_categories=True, category_filter=["locked"]) %}
     {% if messages %}
-      <div
-        class="flash-overlay"
-        style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); z-index: 9999;"
-      >
-        <div
-          class="flash-modal"
-          style="background: #ffffff; padding: 1.25rem 1.5rem; border-radius: 0.75rem; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.25); font-size: 0.95rem;"
-        >
+      <div class="flash-overlay">
+        <div class="flash-modal">
           {% for category, message in messages %}
-            <div style="margin-bottom: 0.75rem; color: #111827;">
+            <div style="margin-bottom: 0.75rem; color: var(--text);">
               {% if category == 'locked' %}
                 <strong>Pro feature locked</strong><br>
                 {{ message }}
@@ -171,21 +208,16 @@
   {% endif %}
 
   {% if not current_user.has_active_subscription %}
-    <div
-      class="plan-summary"
-      style="margin-bottom: 1.5rem; padding: 1rem 1.25rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #f9fafb;"
-    >
-      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 0.25rem;">
-        TheoChat Pro
+    <div class="plan-summary">
+      <div class="headline">TheoChat Pro</div>
+      <div class="price-row">
+        <span style="font-size: 1.8rem; font-weight: 700; color: var(--text);">&pound;19</span>
+        <span style="font-size: 0.95rem; color: var(--muted);">per month</span>
       </div>
-      <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.25rem;">
-        <span style="font-size: 1.8rem; font-weight: 700; color: #111827;">&pound;19</span>
-        <span style="font-size: 0.95rem; color: #4b5563;">per month</span>
-      </div>
-      <div style="font-size: 0.95rem; color: #111827; margin-bottom: 0.25rem;">
+      <div style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem;">
         7-day free trial of TheoChat Pro, then &pound;19/month.
       </div>
-      <div style="font-size: 0.85rem; color: #4b5563;">
+      <div style="font-size: 0.85rem; color: var(--muted);">
         Cancel any time during your 7-day free trial on this billing page and you <strong>will not be charged</strong>.
       </div>
     </div>
@@ -193,19 +225,14 @@
       <button type="submit" class="primary">Start 7-day free trial</button>
     </form>
   {% else %}
-    <div
-      class="plan-summary"
-      style="margin-bottom: 1.5rem; padding: 1rem 1.25rem; border-radius: 0.75rem; border: 1px solid #e5e7eb; background: #f9fafb;"
-    >
-      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 0.25rem;">
-        TheoChat Pro
-      </div>
-      <div style="display: flex; align-items: baseline; gap: 0.35rem; margin-bottom: 0.25rem;">
-        <span style="font-size: 1.8rem; font-weight: 700; color: #111827;">&pound;19</span>
-        <span style="font-size: 0.95rem; color: #4b5563;">per month</span>
+    <div class="plan-summary">
+      <div class="headline">TheoChat Pro</div>
+      <div class="price-row">
+        <span style="font-size: 1.8rem; font-weight: 700; color: var(--text);">&pound;19</span>
+        <span style="font-size: 0.95rem; color: var(--muted);">per month</span>
       </div>
       {% if subscription_info and subscription_info.status == "trialing" %}
-        <div style="font-size: 0.95rem; color: #111827; margin-bottom: 0.25rem;">
+        <div style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem;">
       You're on the <strong>TheoChat Pro 7-day free trial</strong>.
           {% if subscription_info.current_period_end_date %}
             Your trial ends on <strong>{{ subscription_info.current_period_end_date }}</strong>.
@@ -213,12 +240,12 @@
           After your trial, you'll be charged <strong>&pound;19/month</strong> unless you cancel before it ends.
         </div>
         {% if subscription_info.current_period_end_date %}
-          <p style="font-size: 0.9rem; color: #9ca3af; margin-top: 0.25rem;">
+          <p style="font-size: 0.9rem; color: var(--muted); margin-top: 0.25rem;">
             You have full access to all Pro features until <strong>{{ subscription_info.current_period_end_date }}</strong>. Cancel before then and you won't be charged.
           </p>
         {% endif %}
       {% else %}
-        <div style="font-size: 0.95rem; color: #111827; margin-bottom: 0.25rem;">
+        <div style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem;">
           You're on TheoChat Pro at &pound;19/month{% if subscription_info and subscription_info.current_period_end_date %}, next billing date {{ subscription_info.current_period_end_date }}{% endif %}.
         </div>
       {% endif %}
@@ -228,7 +255,7 @@
   <div class="billing-header-row">
     <div>
       <h2 style="margin:0 0 0.25rem;">Billing</h2>
-      <p style="margin:0;color:#6b7280;">Manage your TheoChat subscription.</p>
+      <p style="margin:0;color:var(--muted);">Manage your TheoChat subscription.</p>
     </div>
     <div class="status-pill">
       {% if trial_status == "Subscribed" %}
@@ -247,10 +274,7 @@
     </div>
   {% else %}
     {% if current_user.has_active_subscription %}
-      <div
-        class="subscription-panel"
-        style="margin-top: 0.5rem; padding: 1rem 1.25rem; border-radius: 0.75rem;"
-      >
+      <div class="subscription-panel" style="margin-top:0.5rem;">
         <h3 style="font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem;">Your subscription</h3>
 
         {% if subscription_info %}
@@ -299,7 +323,7 @@
     {% else %}
       <div class="card" style="max-width:520px;">
         <h3 style="margin:0 0 0.35rem;">TheoChat Pro</h3>
-        <p style="margin:0 0 0.5rem;color:#6b7280;">Use TheoChat on one website with your own content.</p>
+        <p style="margin:0 0 0.5rem;color:var(--muted);">Use TheoChat on one website with your own content.</p>
         <p style="margin:0 0 0.9rem;font-weight:700;font-size:1.05rem;">Monthly subscription</p>
         <div class="alert alert-info" style="margin-bottom: 1rem;">
           <strong>7-day free trial:</strong> You can cancel any time during your 7-day trial on this billing page and you will not be charged.
@@ -307,7 +331,7 @@
         <form method="POST" action="{{ url_for('create_checkout_session') }}" style="margin:0 0 0.5rem;">
           <button type="submit" class="primary">Start 7-day free trial</button>
         </form>
-        <p style="margin:0;font-size:0.9rem;color:#6b7280;">Payments are processed by Stripe. You can cancel any time.</p>
+        <p style="margin:0;font-size:0.9rem;color:var(--muted);">Payments are processed by Stripe. You can cancel any time.</p>
       </div>
     {% endif %}
   {% endif %}
