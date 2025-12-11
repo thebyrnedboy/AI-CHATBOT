@@ -302,6 +302,41 @@
       white-space: pre;
     }
 
+    @media (max-width: 768px) {
+      .tc-shell,
+      .tc-main,
+      .tc-card,
+      .setup-page {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+      }
+
+      .step-card,
+      .tc-card.setup-main,
+      .card.setup-main,
+      .step-card .tc-card {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+        border-radius: 1.25rem;
+      }
+
+      .step-card p,
+      .tc-subtext,
+      .step-body,
+      .card p,
+      .setup-page p {
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      .tc-code-box {
+        max-width: 100%;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+    }
+
     .tc-copy-btn {
       display: inline-flex;
       align-items: center;
