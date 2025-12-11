@@ -110,7 +110,18 @@ login_manager.init_app(app)
 
 @app.context_processor
 def inject_globals():
-    return {"ADMIN_EMAIL": ADMIN_EMAIL}
+    api_key = None
+    try:
+        if current_user.is_authenticated:
+            biz = get_business_for_user(int(current_user.id))
+            if biz:
+                api_key = biz["api_key"]
+    except Exception:
+        api_key = None
+    return {
+        "ADMIN_EMAIL": ADMIN_EMAIL,
+        "current_business_api_key": api_key,
+    }
 
 
 # ==========================

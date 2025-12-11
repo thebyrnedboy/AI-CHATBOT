@@ -200,6 +200,9 @@
       background: #ffffff;
       color: #0f172a;
       outline: none;
+      background-color: #f9fafb;
+      border-color: rgba(148, 163, 184, 0.8);
+      color: #0f172a;
     }
 
     .tc-input:focus {
@@ -208,17 +211,17 @@
     }
 
     .tc-input::placeholder {
-      color: #9ca3af;
+      color: rgba(100, 116, 139, 0.9);
     }
 
     .dark .tc-input {
-      background: #020617;
-      border-color: #1f2937;
-      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.96);
+      border-color: rgba(148, 163, 184, 0.9);
+      color: #e5edff;
     }
 
     .dark .tc-input::placeholder {
-      color: #6b7280;
+      color: rgba(148, 163, 184, 0.9);
     }
 
     .tc-help-text {
@@ -254,7 +257,8 @@
       color: #e5e7eb;
     }
 
-    .tc-code-block {
+    .tc-code-block,
+    .tc-code-box {
       position: relative;
       border-radius: 1rem;
       padding: 0.9rem 1rem;
@@ -263,33 +267,40 @@
       font-size: 0.8rem;
       overflow-x: auto;
       border: 1px solid rgba(148, 163, 184, 0.35);
-      background: #0b1220;
+      background: #0b1120;
       color: #e5e7eb;
     }
 
-    .dark .tc-code-block {
-      background: #020617;
+    .tc-shell:not(.dark) .tc-code-block,
+    .tc-shell:not(.dark) .tc-code-box {
+      background: #0f172a;
+      color: #f9fafb;
+    }
+
+    .dark .tc-code-block,
+    .dark .tc-code-box {
+      background: rgba(15, 23, 42, 0.98);
       border-color: rgba(129, 140, 248, 0.4);
-      color: #e5e7eb;
+      color: #e5edff;
     }
 
-    .tc-code-block code {
+    .tc-code-block code,
+    .tc-code-box code {
       white-space: pre;
+      color: inherit;
     }
 
     .tc-copy-btn {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.75rem;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.35rem;
-      padding: 0.18rem 0.55rem;
+      padding: 0.4rem 0.9rem;
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, 0.6);
       background: rgba(15, 23, 42, 0.9);
       color: #e5e7eb;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       cursor: pointer;
     }
 
@@ -301,16 +312,45 @@
       background: rgba(15, 23, 42, 0.95);
     }
 
-    .tc-copy-icon {
-      font-size: 0.85rem;
-    }
-
-    .tc-copy-label {
+    .tc-api-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      font-size: 0.78rem;
+      line-height: 1.3;
+      color: #e5edff;
       white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
     }
 
-    .tc-copied-icon {
-      font-size: 0.85rem;
+    .tc-api-pill-label {
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .tc-api-pill-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.75rem;
+      opacity: 0.9;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dark .tc-api-pill {
+      background: rgba(15, 23, 42, 0.98);
+      border-color: rgba(59, 130, 246, 0.7);
+      color: #e5edff;
+    }
+
+    .tc-shell:not(.dark) .tc-api-pill {
+      background: #ffffff;
+      border-color: rgba(148, 163, 184, 0.7);
+      color: #0f172a;
     }
 
     .shell {
@@ -503,8 +543,8 @@
       display: flex;
       gap: 0.75rem;
       margin-top: 0.75rem;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 0.25rem;
+      border-bottom: none;
+      padding-bottom: 0;
     }
 
     .tab-link {
@@ -527,10 +567,6 @@
       border-bottom-color: #ffffff;
       color: #111827;
       font-weight: 600;
-    }
-
-    body.dark .main-tabs {
-      border-bottom-color: #1f2937;
     }
 
     body.dark .tab-link {
@@ -775,6 +811,12 @@
       </h1>
       <div class="nav-right">
         <button id="theme-toggle" type="button" class="pill">Dark mode</button>
+        {% if current_user.is_authenticated and current_business_api_key %}
+          <div class="tc-api-pill">
+            <div class="tc-api-pill-label">API key</div>
+            <div class="tc-api-pill-value">{{ current_business_api_key }}</div>
+          </div>
+        {% endif %}
 
         {% if current_user.is_authenticated %}
           <div class="user-menu" id="user-menu">
@@ -837,27 +879,6 @@
     {% endwith %}
 
     <main class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-4 md:p-6">
-      {% if current_user.is_authenticated and api_key %}
-        <div style="display:flex;align-items:flex-start;justify-content:flex-end;gap:0.75rem;flex-wrap:wrap;">
-          <div class="api-key-pill" style="position:relative; min-width:240px;">
-            <strong>API key</strong><br>
-            <code id="api-key-display">{{ api_key }}</code>
-            <button
-              type="button"
-              aria-label="Copy API key"
-              data-copy-target="#api-key-display"
-              class="absolute top-2 right-2 inline-flex items-center justify-center rounded-md"
-              style="border:1px solid var(--border);background:#fff;padding:0.25rem;"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      {% endif %}
-
       {% block content %}{% endblock %}
     </main>
     <div style="margin-top:1rem;font-size:0.85rem;color:var(--muted);text-align:center;">© TheoChat — theochat.co.uk</div>
@@ -1016,49 +1037,32 @@
 
   </script>
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      function getCopyText(targetSelector) {
-        var el = document.querySelector(targetSelector);
-        if (!el) return null;
-        if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
-          return el.value;
+    document.addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-copy-target]");
+      if (!btn) return;
+
+      const targetSelector = btn.getAttribute("data-copy-target");
+      if (!targetSelector) return;
+
+      const el = document.querySelector(targetSelector);
+      if (!el) return;
+
+      const text = (el.tagName === "TEXTAREA" || el.tagName === "INPUT") ? el.value : el.innerText;
+      if (!text) return;
+
+      const originalText = btn.textContent;
+      const isSnippetBtn = btn.classList.contains("tc-copy-btn");
+
+      navigator.clipboard.writeText(text.trim()).then(function () {
+        if (isSnippetBtn) {
+          btn.textContent = "Copied";
+          setTimeout(function () { btn.textContent = "Copy snippet"; }, 2000);
+        } else if (originalText) {
+          btn.textContent = "Copied";
+          setTimeout(function () { btn.textContent = originalText; }, 1500);
         }
-        return el.textContent;
-      }
-
-      document.querySelectorAll("[data-copy-target]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var target = btn.getAttribute("data-copy-target");
-          if (!target) return;
-          var text = getCopyText(target);
-          if (!text) return;
-
-          var originalHtml = btn.innerHTML;
-          var copyLabel = btn.getAttribute("data-copy-label");
-          var copiedLabel = btn.getAttribute("data-copied-label");
-
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(function () {
-              if (copyLabel && copiedLabel) {
-                btn.innerHTML = '<span class="tc-copied-icon">✓</span><span class="tc-copy-label">' + copiedLabel + "</span>";
-                setTimeout(function () { btn.innerHTML = originalHtml; }, 1500);
-              } else if (originalHtml !== null) {
-                btn.textContent = "Copied!";
-                setTimeout(function () { btn.innerHTML = originalHtml; }, 1500);
-              }
-            }).catch(function () {});
-          } else {
-            var temp = document.createElement("textarea");
-            temp.value = text;
-            temp.style.position = "fixed";
-            temp.style.opacity = "0";
-            document.body.appendChild(temp);
-            temp.focus();
-            temp.select();
-            try { document.execCommand("copy"); } catch (e) {}
-            document.body.removeChild(temp);
-          }
-        });
+      }).catch(function () {
+        // leave text as-is on failure
       });
     });
   </script>

@@ -255,22 +255,19 @@
         <p class="step-body">
           Paste this snippet to enable TheoChat before the closing &lt;/body&gt; tag or into your website builder's custom code area.
         </p>
-        <div class="tc-code-block relative">
+        <div class="tc-code-box">
 <code id="embed-snippet-setup"><script
   src="https://theochat.co.uk/embed.js?api_key={{ api_key }}"
   async
 ></script></code>
-          <button
-            type="button"
-            aria-label="Copy embed snippet"
-            class="tc-copy-btn"
-            data-copy-target="#embed-snippet-setup"
-            data-copy-label="Copy code"
-            data-copied-label="Copied"
-          >
-            <span class="tc-copy-icon">📋</span><span class="tc-copy-label">Copy code</span>
-          </button>
         </div>
+        <button
+          type="button"
+          class="tc-copy-btn"
+          data-copy-target="#embed-snippet-setup"
+        >
+          Copy snippet
+        </button>
       {% else %}
         <p class="step-body">
           Once you've added your business details and uploaded knowledge, your embed code will appear here so you can add TheoChat to your site.

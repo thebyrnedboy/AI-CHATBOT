@@ -139,23 +139,20 @@
     {% endif %}
     <button id="generate-snippet" type="button" class="primary tc-btn-primary">Generate embed snippet</button>
     <div id="snippet-block" style="display:none;margin-top:0.6rem;">
-      <div class="tc-code-block relative" id="embed-snippet">
+      <div class="tc-code-box" id="embed-snippet">
 <code id="embed-snippet-business"><script
   src="https://theochat.co.uk/embed.js?api_key={{ biz.api_key }}"
   async
 ></script></code>
-        <button
-          id="copy-snippet"
-          type="button"
-          aria-label="Copy embed snippet"
-          class="tc-copy-btn"
-          data-copy-target="#embed-snippet-business"
-          data-copy-label="Copy code"
-          data-copied-label="Copied"
-        >
-          <span class="tc-copy-icon">📋</span><span class="tc-copy-label">Copy code</span>
-        </button>
       </div>
+      <button
+        id="copy-snippet"
+        type="button"
+        class="tc-copy-btn"
+        data-copy-target="#embed-snippet-business"
+      >
+        Copy snippet
+      </button>
       <div class="row" style="margin-top:0.5rem;gap:0.5rem;">
         <button id="test-widget" type="button">Open test page</button>
       </div>

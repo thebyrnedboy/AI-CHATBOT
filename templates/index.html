@@ -35,22 +35,6 @@
     color: var(--muted);
   }
 
-  .api-key-pill {
-    font-size: 0.85rem;
-    background: #eef2ff;
-    color: #312e81;
-    border: 1px solid #c7d2fe;
-    padding: 0.65rem 0.85rem;
-    border-radius: 10px;
-    min-width: 220px;
-  }
-
-  body.dark .api-key-pill {
-    background: #0f172a;
-    border-color: #1e3a8a;
-    color: #c7d2fe;
-  }
-
   .trial-banner {
     display: flex;
     justify-content: space-between;
@@ -527,22 +511,19 @@
     <h3>Embed on your site</h3>
     {% if embed_available %}
       <p>Paste this snippet before &lt;/body&gt; or in your tag manager.</p>
-      <div class="tc-code-block relative">
+      <div class="tc-code-box">
 <code id="embed-snippet-dashboard"><script
   src="https://theochat.co.uk/embed.js?api_key={{ api_key }}"
   async
 ></script></code>
-        <button
-          type="button"
-          aria-label="Copy embed snippet"
-          class="tc-copy-btn"
-          data-copy-target="#embed-snippet-dashboard"
-          data-copy-label="Copy code"
-          data-copied-label="Copied"
-        >
-          <span class="tc-copy-icon">📋</span><span class="tc-copy-label">Copy code</span>
-        </button>
       </div>
+      <button
+        type="button"
+        class="tc-copy-btn"
+        data-copy-target="#embed-snippet-dashboard"
+      >
+        Copy snippet
+      </button>
       <div style="display:flex;gap:0.65rem;align-items:center;margin-top:0.5rem;flex-wrap:wrap;">
         <a href="{{ url_for('setup') }}" style="font-size:0.9rem;color:#2563eb;text-decoration:none;">
           Need help adding this to your website? Click here
