@@ -120,9 +120,15 @@
     {% endif %}
     <button id="generate-snippet" type="button" class="primary">Generate embed snippet</button>
     <div id="snippet-block" style="display:none;margin-top:0.6rem;">
-      <textarea id="embed-snippet" readonly style="min-height:120px;">{{ embed_snippet }}</textarea>
+      <pre id="embed-snippet" style="margin:0;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:0.75rem;overflow:auto;font-size:0.9rem;">
+<code><script
+  src="{{ base_url }}/embed.js"
+  data-api-key="{{ biz.api_key }}"
+  data-base-url="{{ base_url }}"
+  async
+></script></code></pre>
       <div class="row" style="margin-top:0.5rem;gap:0.5rem;">
-        <button id="copy-snippet" type="button" class="primary">Copy snippet</button>
+        <button id="copy-snippet" type="button" class="primary">Copy embed snippet</button>
         <button id="test-widget" type="button">Open test page</button>
       </div>
       <div class="muted" style="margin-top:0.4rem;">
@@ -337,11 +343,38 @@
     copyKeyBtn.addEventListener("click", () => copyText(keyEl.textContent.trim()));
   }
   if (copySnippetBtn && snippetEl) {
-    copySnippetBtn.addEventListener("click", () => copyText(snippetEl.value.trim()));
+    copySnippetBtn.addEventListener("click", () => {
+      const text = snippetEl.innerText.trim();
+      const original = copySnippetBtn.textContent;
+      const fallbackCopy = () => {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          copySnippetBtn.textContent = "Copied!";
+          setTimeout(() => { copySnippetBtn.textContent = original; }, 1500);
+        }).catch(() => {
+          fallbackCopy();
+          copySnippetBtn.textContent = "Copied!";
+          setTimeout(() => { copySnippetBtn.textContent = original; }, 1500);
+        });
+      } else {
+        fallbackCopy();
+        copySnippetBtn.textContent = "Copied!";
+        setTimeout(() => { copySnippetBtn.textContent = original; }, 1500);
+      }
+    });
   }
   if (testBtn && snippetEl) {
     testBtn.addEventListener("click", () => {
-      const snippet = snippetEl.value.trim();
+      const snippet = snippetEl.innerText.trim();
       if (!snippet) return;
       const html = `
 <!doctype html>

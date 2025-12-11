@@ -7,6 +7,7 @@ from typing import List, Tuple, Optional, Dict
 from datetime import datetime, timezone, timedelta, UTC
 import re
 from functools import wraps
+from collections import Counter
 import stripe
 import smtplib
 import json
@@ -127,7 +128,22 @@ def get_business_by_api_key(api_key: str):
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
-        "SELECT id, name, api_key, owner_user_id, allowed_domains, contact_enabled, contact_email FROM businesses WHERE api_key = ?",
+        """
+        SELECT
+            id,
+            name,
+            api_key,
+            owner_user_id,
+            allowed_domains,
+            contact_enabled,
+            contact_email,
+            theme_primary_color,
+            theme_secondary_color,
+            theme_font_family,
+            theme_border_radius
+        FROM businesses
+        WHERE api_key = ?
+        """,
         (api_key,),
     )
     row = c.fetchone()
@@ -281,6 +297,10 @@ def init_db():
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
     ensure_column(c, "businesses", "last_import_url", "TEXT")
+    ensure_column(c, "businesses", "theme_primary_color", "TEXT")
+    ensure_column(c, "businesses", "theme_secondary_color", "TEXT")
+    ensure_column(c, "businesses", "theme_font_family", "TEXT")
+    ensure_column(c, "businesses", "theme_border_radius", "TEXT")
 
     c.execute(
         """
@@ -671,6 +691,128 @@ def fetch_page_text(url: str, base_origin: str, max_chars: int = 15000):
     return text, resp.text, None
 
 
+def _is_greyish(color: str) -> bool:
+    if not color:
+        return True
+    c = color.strip().lower()
+    if c in {"#000", "#000000", "#fff", "#ffffff", "black", "white"}:
+        return True
+    if c.startswith("rgb"):
+        try:
+            nums = [int(float(x)) for x in re.findall(r"[\d\.]+", c)[:3]]
+            return all(n <= 20 for n in nums) or all(n >= 235 for n in nums)
+        except Exception:
+            return False
+    if c.startswith("#") and len(c) in (4, 5, 7, 9):
+        try:
+            if len(c) in (4, 5):
+                c = "#" + "".join(ch * 2 for ch in c[1:4])
+            r = int(c[1:3], 16)
+            g = int(c[3:5], 16)
+            b = int(c[5:7], 16)
+            return (r <= 20 and g <= 20 and b <= 20) or (r >= 235 and g >= 235 and b >= 235)
+        except Exception:
+            return False
+    return False
+
+
+def extract_theme_from_html(html: str, url: str | None = None) -> dict:
+    soup = BeautifulSoup(html or "", "html.parser")
+    colors = Counter()
+
+    # meta theme-color
+    meta_theme = soup.find("meta", attrs={"name": "theme-color"})
+    if meta_theme and meta_theme.get("content"):
+        val = meta_theme["content"].strip()
+        if not _is_greyish(val):
+            colors[val.lower()] += 5
+
+    color_regex = re.compile(r"(?:color|background-color)\s*:\s*([^;}\n]+)", re.IGNORECASE)
+
+    def add_colors_from_style(style_val: str, weight: int = 1):
+        if not style_val:
+            return
+        for match in color_regex.findall(style_val):
+            candidate = match.strip().lower()
+            if not _is_greyish(candidate):
+                colors[candidate] += weight
+
+    for tag in soup.find_all(["a", "button"]):
+        style_attr = tag.get("style", "")
+        add_colors_from_style(style_attr, weight=1)
+        cls = " ".join(tag.get("class", [])).lower()
+        if "btn" in cls or "button" in cls:
+            add_colors_from_style(style_attr, weight=2)
+
+    for style_tag in soup.find_all("style"):
+        add_colors_from_style(style_tag.get_text() or "", weight=1)
+
+    primary_color = None
+    secondary_color = None
+    if colors:
+        primary_color = colors.most_common(1)[0][0]
+        for color_val, _ in colors.most_common():
+            if color_val != primary_color:
+                secondary_color = color_val
+                break
+
+    font_family = None
+    font_regex = re.compile(r"font-family\s*:\s*([^;}\n]+)", re.IGNORECASE)
+
+    for tag_name in ["body", "html", "main"]:
+        tag = soup.find(tag_name)
+        if tag and tag.get("style"):
+            m = font_regex.search(tag["style"])
+            if m:
+                font_family = m.group(1).strip()
+                break
+
+    if not font_family:
+        for style_tag in soup.find_all("style"):
+            m = font_regex.search(style_tag.get_text() or "")
+            if m:
+                font_family = m.group(1).strip()
+                break
+
+    if not font_family:
+        for link in soup.find_all("link", href=True):
+            href = link["href"]
+            if "fonts.googleapis.com" in href and "family=" in href:
+                try:
+                    family_part = href.split("family=", 1)[1]
+                    family = family_part.split("&", 1)[0]
+                    family = family.replace("+", " ").split(":")[0]
+                    if family:
+                        font_family = family
+                        break
+                except Exception:
+                    pass
+
+    radius_regex = re.compile(r"border-radius\s*:\s*([^;}\n]+)", re.IGNORECASE)
+    radius_counter: Counter[str] = Counter()
+    for tag in soup.find_all(True):
+        style_attr = tag.get("style", "")
+        for match in radius_regex.findall(style_attr):
+            val = match.strip()
+            if val:
+                radius_counter[val] += 1
+    for style_tag in soup.find_all("style"):
+        for match in radius_regex.findall(style_tag.get_text() or ""):
+            val = match.strip()
+            if val:
+                radius_counter[val] += 1
+    border_radius = None
+    if radius_counter:
+        border_radius = radius_counter.most_common(1)[0][0]
+
+    return {
+        "primary_color": primary_color,
+        "secondary_color": secondary_color,
+        "font_family": font_family,
+        "border_radius": border_radius,
+    }
+
+
 def select_relevant_chunks(query: str, chunks: List[str], max_chunks: int = 3) -> List[str]:
     query_words = {w.lower() for w in query.split() if len(w) > 3}
     scored = []
@@ -843,7 +985,7 @@ def send_contact_email(
     configured or an error occurred. Errors are printed but do NOT crash
     the app.
     """
-    if not (SMTP_HOST and SMTP_PORT and to_email):
+    if not (BREVO_API_KEY and SMTP_FROM_EMAIL and to_email):
         # Email not configured properly; silently skip
         return False
 
@@ -1479,7 +1621,7 @@ def import_site():
         return redirect(url_for("knowledge"))
 
     base_origin = f"{parsed.scheme}://{parsed.netloc}"
-    text, _, err = fetch_page_text(url, base_origin, max_chars=15000)
+    text, html_content, err = fetch_page_text(url, base_origin, max_chars=15000)
     if err or not text:
         flash(err or "No readable text found. Please check the website and try again.", "error")
         return redirect(url_for("knowledge"))
@@ -1524,14 +1666,41 @@ def import_site():
 
     total_chunks = get_chunk_count(int(current_user.id), int(current_user.business_id))
 
-    # Persist the last imported URL for this business after successful import
+    # Persist the last imported URL and detected theme for this business after successful import
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute(
-            "UPDATE businesses SET last_import_url = ? WHERE id = ?",
-            (url, int(current_user.business_id)),
-        )
+        theme = {}
+        try:
+            theme = extract_theme_from_html(html_content or "", url)
+            print("[TheoChat] Theme detection for import", url, "->", theme.get("primary_color"))
+        except Exception as e:
+            print("Theme extraction error:", e)
+
+        primary = theme.get("primary_color") if isinstance(theme, dict) else None
+        secondary = theme.get("secondary_color") if isinstance(theme, dict) else None
+        font = theme.get("font_family") if isinstance(theme, dict) else None
+        radius = theme.get("border_radius") if isinstance(theme, dict) else None
+
+        if any([primary, secondary, font, radius]):
+            c.execute(
+                """
+                UPDATE businesses
+                SET
+                    last_import_url = ?,
+                    theme_primary_color = COALESCE(?, theme_primary_color),
+                    theme_secondary_color = COALESCE(?, theme_secondary_color),
+                    theme_font_family = COALESCE(?, theme_font_family),
+                    theme_border_radius = COALESCE(?, theme_border_radius)
+                WHERE id = ?
+                """,
+                (url, primary, secondary, font, radius, int(current_user.business_id)),
+            )
+        else:
+            c.execute(
+                "UPDATE businesses SET last_import_url = ? WHERE id = ?",
+                (url, int(current_user.business_id)),
+            )
         conn.commit()
     finally:
         conn.close()
@@ -1798,442 +1967,83 @@ def widget_contact():
     return add_cors(Response("OK", status=200, mimetype="text/plain"))
 
 
+@app.get("/widget_config")
+def widget_config():
+    api_key = (request.args.get("api_key") or request.headers.get("X-API-Key") or "").strip()
+    if not api_key:
+        return add_cors(
+            Response("Error: Missing API key", status=400, mimetype="text/plain")
+        )
+
+    biz = get_business_by_api_key(api_key)
+    if not biz:
+        return add_cors(
+            Response("Error: Invalid API key", status=403, mimetype="text/plain")
+        )
+
+    allowed = parse_allowed_domains(biz["allowed_domains"] or "")
+    if allowed:
+        host = get_request_host_from_referer()
+        if not host:
+            origin = request.headers.get("Origin", "")
+            if origin:
+                try:
+                    host = normalize_host(urlparse(origin).netloc)
+                except Exception:
+                    host = ""
+            if not host and DEBUG_LOGS:
+                print("Domain allowlist: missing or invalid Referer/Origin; cannot determine host.")
+        if not host:
+            return add_cors(
+                Response(
+                    "Blocked: could not determine requesting site. Ensure your site sends a Referer or Origin header and that the domain is on your allowlist.",
+                    status=403,
+                    mimetype="text/plain",
+                )
+            )
+        if not any(host == d or host.endswith("." + d) for d in allowed):
+            if DEBUG_LOGS:
+                print(f"Domain allowlist: host '{host}' not in allowed domains {allowed}")
+            return add_cors(
+                Response(
+                    "Error: Domain not allowed for this API key.",
+                    status=403,
+                    mimetype="text/plain",
+                )
+            )
+
+    owner = load_user(biz["owner_user_id"]) if biz["owner_user_id"] else None
+    if not owner or not getattr(owner, "has_active_subscription", False):
+        return add_cors(
+            Response(
+                "Error: Subscription inactive. Widget config is disabled for this business.",
+                status=402,
+                mimetype="text/plain",
+            )
+        )
+
+    payload = {
+        "theme_primary_color": biz["theme_primary_color"] if "theme_primary_color" in biz.keys() else None,
+        "theme_secondary_color": biz["theme_secondary_color"] if "theme_secondary_color" in biz.keys() else None,
+        "theme_font_family": biz["theme_font_family"] if "theme_font_family" in biz.keys() else None,
+        "theme_border_radius": biz["theme_border_radius"] if "theme_border_radius" in biz.keys() else None,
+    }
+
+    return add_cors(jsonify(payload))
+
+
 # ==========================
 # Embed script
 # ==========================
 @app.get("/embed.js")
 def embed_js():
-    js = r"""
-(function() {
-  const scriptEl = document.currentScript || document.querySelector('script[data-api-key]');
-
-  function getApiKeyFromScript(el) {
-    if (!el) return null;
-
-    // 1) Preferred: data-api-key attribute
-    const fromAttr = el.getAttribute("data-api-key");
-    if (fromAttr) return fromAttr;
-
-    // 2) Backwards compatibility: api_key query parameter in the script src
-    if (el.src) {
-      try {
-        const url = new URL(el.src, window.location.href);
-        const fromQuery = url.searchParams.get("api_key");
-        if (fromQuery) return fromQuery;
-      } catch (e) {
-        // ignore URL parsing errors
-      }
-    }
-    return null;
-  }
-
-  const API_KEY = getApiKeyFromScript(scriptEl);
-  if (!API_KEY) {
-    console.error("[TheoChat] API key missing. Add data-api-key to the script tag or ?api_key=... in the src.");
-    return;
-  }
-  const baseUrl =
-    (scriptEl && scriptEl.getAttribute("data-base-url")) ||
-    (scriptEl ? new URL(scriptEl.src, window.location.href).origin : "");
-  const globalBase = window.__CHATBOT_BASE_URL;
-  const BASE_URL = (baseUrl || globalBase);
-  if (!BASE_URL) {
-    console.error("[TheoChat] BASE_URL not set. Add data-base-url to the script tag or set window.__CHATBOT_BASE_URL.");
-    return;
-  }
-  const ENDPOINT = BASE_URL.replace(/\/$/, "") + "/chat_stream?api_key=" + encodeURIComponent(API_KEY);
-  const logoUrl = baseUrl
-    ? `${baseUrl.replace(/\/+$/, "")}/static/img/theochat-logo-mark.png`
-    : "/static/img/theochat-logo-mark.png";
-
-  const btn = document.createElement("button");
-  const defaultLabel = "Chat with us";
-  const customLabel = scriptEl && scriptEl.getAttribute("data-button-label");
-  btn.textContent = customLabel || defaultLabel;
-  btn.style.position = "fixed";
-  btn.style.bottom = "16px";
-  btn.style.right = "16px";
-  btn.style.zIndex = 9999;
-  btn.style.background = "#2563eb";
-  btn.style.color = "#fff";
-  btn.style.border = "none";
-  btn.style.borderRadius = "999px";
-  btn.style.padding = "10px 14px";
-  btn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-  btn.style.cursor = "pointer";
-
-  const panel = document.createElement("div");
-  panel.style.position = "fixed";
-  panel.style.bottom = "60px";
-  panel.style.right = "16px";
-  panel.style.width = "320px";
-  panel.style.height = "470px";
-  panel.style.background = "#fff";
-  panel.style.color = "#111";
-  panel.style.border = "1px solid #e5e7eb";
-  panel.style.borderRadius = "12px";
-  panel.style.boxShadow = "0 10px 30px rgba(0,0,0,0.25)";
-  panel.style.display = "none";
-  panel.style.flexDirection = "column";
-  panel.style.overflow = "hidden";
-  panel.style.fontFamily = "system-ui, -apple-system, sans-serif";
-  panel.style.opacity = "0";
-  panel.style.transform = "translateY(8px)";
-  panel.style.transition = "opacity 0.2s ease, transform 0.2s ease";
-
-  // Invisible resize handle in the top-left corner
-  const resizer = document.createElement("div");
-  resizer.style.position = "absolute";
-  resizer.style.left = "4px";
-  resizer.style.top = "4px";
-  resizer.style.width = "16px";
-  resizer.style.height = "16px";
-  resizer.style.cursor = "nwse-resize";
-  resizer.style.background = "transparent"; // no visible indicator
-  resizer.style.zIndex = "10000";
-
-  let isResizing = false;
-  let startX, startY, startW, startH;
-
-  resizer.addEventListener("mousedown", (e) => {
-    isResizing = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startW = panel.offsetWidth;
-    startH = panel.offsetHeight;
-    e.preventDefault();
-    e.stopPropagation();
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!isResizing) return;
-    const dx = startX - e.clientX;
-    const dy = startY - e.clientY;
-    const minW = 220;
-    const maxW = 600;
-    const minH = 280;
-    const maxH = 800;
-    const newW = Math.min(maxW, Math.max(minW, startW + dx));
-    const newH = Math.min(maxH, Math.max(minH, startH + dy));
-    panel.style.width = newW + "px";
-    panel.style.height = newH + "px";
-  });
-
-  window.addEventListener("mouseup", () => {
-    isResizing = false;
-  });
-
-  function openPanel() {
-    panel.style.display = "flex";
-    requestAnimationFrame(() => {
-      panel.style.opacity = "1";
-      panel.style.transform = "translateY(0)";
-    });
-  }
-
-  function closePanel() {
-    panel.style.opacity = "0";
-    panel.style.transform = "translateY(8px)";
-    setTimeout(() => {
-      panel.style.display = "none";
-    }, 200);
-  }
-
-  const header = document.createElement("div");
-  header.style.display = "flex";
-  header.style.alignItems = "center";
-  header.style.gap = "8px";
-  header.style.fontWeight = "600";
-  header.style.padding = "10px 12px";
-  header.style.borderBottom = "1px solid #e5e7eb";
-  const headerAvatar = document.createElement("img");
-  headerAvatar.src = logoUrl;
-  headerAvatar.alt = "TheoChat";
-  headerAvatar.style.width = "20px";
-  headerAvatar.style.height = "20px";
-  headerAvatar.style.borderRadius = "999px";
-  headerAvatar.style.objectFit = "cover";
-  const headerTitle = document.createElement("span");
-  headerTitle.textContent = "TheoChat";
-  header.appendChild(headerAvatar);
-  header.appendChild(headerTitle);
-
-  const chatArea = document.createElement("div");
-  chatArea.style.flex = "1";
-  chatArea.style.padding = "10px";
-  chatArea.style.overflowY = "auto";
-  chatArea.style.display = "flex";
-  chatArea.style.flexDirection = "column";
-  chatArea.style.gap = "8px";
-  chatArea.style.fontSize = "14px";
-  chatArea.style.background = "#f9fafb";
-
-  function addBubble(text, isUser) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    div.style.padding = "8px 10px";
-    div.style.borderRadius = "10px";
-    div.style.maxWidth = "80%";
-    div.style.whiteSpace = "pre-wrap";
-    div.style.alignSelf = isUser ? "flex-end" : "flex-start";
-    div.style.background = isUser ? "#dbeafe" : "#e5e7eb";
-    chatArea.appendChild(div);
-    chatArea.scrollTop = chatArea.scrollHeight;
-    return div;
-  }
-
-  addBubble("Hi, I'm Theo, your website's AI assistant from TheoChat. Ask me anything about this business.", false);
-
-  const inputRow = document.createElement("div");
-  inputRow.style.display = "flex";
-  inputRow.style.gap = "6px";
-  inputRow.style.padding = "10px";
-  inputRow.style.borderTop = "1px solid #e5e7eb";
-  const input = document.createElement("input");
-  input.type = "text";
-  input.placeholder = "Ask Theo a question about this site...";
-  input.style.flex = "1";
-  input.style.fontSize = "14px";
-  input.style.padding = "8px";
-  input.style.border = "1px solid #d1d5db";
-  input.style.borderRadius = "8px";
-  const sendBtn = document.createElement("button");
-  sendBtn.textContent = "Send";
-  sendBtn.style.padding = "8px 12px";
-  sendBtn.style.border = "none";
-  sendBtn.style.borderRadius = "8px";
-  sendBtn.style.background = "#2563eb";
-  sendBtn.style.color = "#fff";
-  sendBtn.style.cursor = "pointer";
-
-  inputRow.appendChild(input);
-  inputRow.appendChild(sendBtn);
-
-  const contactLink = document.createElement("button");
-  contactLink.textContent = "Contact us";
-  contactLink.style.fontSize = "12px";
-  contactLink.style.background = "transparent";
-  contactLink.style.border = "none";
-  contactLink.style.color = "#4b5563";
-  contactLink.style.cursor = "pointer";
-  contactLink.style.padding = "0 10px 8px";
-  contactLink.style.alignSelf = "flex-start";
-
-  const contactForm = document.createElement("div");
-  contactForm.style.display = "none";
-  contactForm.style.flexDirection = "column";
-  contactForm.style.gap = "6px";
-  contactForm.style.padding = "10px";
-  contactForm.style.borderTop = "1px solid #e5e7eb";
-
-  const nameInput = document.createElement("input");
-  nameInput.type = "text";
-  nameInput.placeholder = "Your name (optional)";
-  nameInput.style.padding = "8px";
-  nameInput.style.border = "1px solid #d1d5db";
-  nameInput.style.borderRadius = "8px";
-  nameInput.style.fontSize = "14px";
-
-  const emailInput = document.createElement("input");
-  emailInput.type = "email";
-  emailInput.placeholder = "Your email (required)";
-  emailInput.style.padding = "8px";
-  emailInput.style.border = "1px solid #d1d5db";
-  emailInput.style.borderRadius = "8px";
-  emailInput.style.fontSize = "14px";
-
-  const phoneInput = document.createElement("input");
-  phoneInput.type = "tel";
-  phoneInput.placeholder = "Your phone number (optional)";
-  phoneInput.style.padding = "8px";
-  phoneInput.style.border = "1px solid #d1d5db";
-  phoneInput.style.borderRadius = "8px";
-  phoneInput.style.fontSize = "14px";
-
-  const messageInput = document.createElement("textarea");
-  messageInput.placeholder = "Your message";
-  messageInput.style.padding = "8px";
-  messageInput.style.border = "1px solid #d1d5db";
-  messageInput.style.borderRadius = "8px";
-  messageInput.style.fontSize = "14px";
-  messageInput.style.minHeight = "80px";
-
-  const contactActions = document.createElement("div");
-  contactActions.style.display = "flex";
-  contactActions.style.gap = "6px";
-  contactActions.style.alignItems = "center";
-
-  const contactSend = document.createElement("button");
-  contactSend.textContent = "Send";
-  contactSend.style.padding = "8px 12px";
-  contactSend.style.border = "none";
-  contactSend.style.borderRadius = "8px";
-  contactSend.style.background = "#2563eb";
-  contactSend.style.color = "#fff";
-  contactSend.style.cursor = "pointer";
-
-  const contactCancel = document.createElement("button");
-  contactCancel.textContent = "Cancel";
-  contactCancel.style.padding = "8px 12px";
-  contactCancel.style.border = "1px solid #d1d5db";
-  contactCancel.style.borderRadius = "8px";
-  contactCancel.style.background = "#fff";
-  contactCancel.style.color = "#111";
-  contactCancel.style.cursor = "pointer";
-
-  const contactStatus = document.createElement("div");
-  contactStatus.style.fontSize = "12px";
-  contactStatus.style.color = "#4b5563";
-
-  contactActions.appendChild(contactSend);
-  contactActions.appendChild(contactCancel);
-
-  contactForm.appendChild(nameInput);
-  contactForm.appendChild(emailInput);
-  contactForm.appendChild(phoneInput);
-  contactForm.appendChild(messageInput);
-  contactForm.appendChild(contactActions);
-  contactForm.appendChild(contactStatus);
-
-  panel.appendChild(header);
-  panel.appendChild(chatArea);
-  panel.appendChild(inputRow);
-  panel.appendChild(contactLink);
-  panel.appendChild(contactForm);
-  const footer = document.createElement("div");
-  footer.textContent = "Powered by TheoChat";
-  footer.style.fontSize = "11px";
-  footer.style.padding = "6px 10px 8px";
-  footer.style.borderTop = "1px solid #e5e7eb";
-  footer.style.color = "#6b7280";
-  footer.style.display = "flex";
-  footer.style.justifyContent = "flex-end";
-  panel.appendChild(footer);
-  panel.appendChild(resizer);
-
-  btn.addEventListener("click", () => {
-    const isHidden = panel.style.display === "none";
-    if (isHidden) {
-      openPanel();
-    } else {
-      closePanel();
-    }
-  });
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-    addBubble(text, true);
-    input.value = "";
-    const botDiv = addBubble("...", false);
-    sendBtn.disabled = true;
-    input.disabled = true;
-    try {
-      const res = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
-      if (!res.ok || !res.body) {
-        botDiv.textContent = "Error: " + res.status;
-        return;
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        fullText += chunk;
-        botDiv.textContent = fullText;
-        chatArea.scrollTop = chatArea.scrollHeight;
-      }
-    } catch (e) {
-      botDiv.textContent = "Network error";
-    } finally {
-      sendBtn.disabled = false;
-      input.disabled = false;
-      input.focus();
-    }
-  }
-
-  sendBtn.addEventListener("click", sendMessage);
-  input.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
-
-  function toggleContactForm(show) {
-    contactForm.style.display = show ? "flex" : "none";
-    contactStatus.textContent = "";
-  }
-
-  contactLink.addEventListener("click", () => {
-    const shouldShow = contactForm.style.display === "none";
-    toggleContactForm(shouldShow);
-    if (shouldShow) {
-      panel.scrollTop = panel.scrollHeight;
-    }
-  });
-
-  contactCancel.addEventListener("click", (e) => {
-    e.preventDefault();
-    toggleContactForm(false);
-  });
-
-  contactSend.addEventListener("click", async () => {
-    const name = nameInput.value.trim();
-    const email = emailInput.value.trim();
-    const phone = phoneInput.value.trim();
-    const message = messageInput.value.trim();
-    if (!email) {
-      contactStatus.textContent = "Please enter your email so the business can reply.";
-      contactStatus.style.color = "#b91c1c";
-      return;
-    }
-    if (!message) {
-      contactStatus.textContent = "Please enter a message.";
-      contactStatus.style.color = "#b91c1c";
-      return;
-    }
-    contactSend.disabled = true;
-    contactStatus.textContent = "Sending...";
-    contactStatus.style.color = "#4b5563";
-    try {
-      const res = await fetch(BASE_URL.replace(/\/$/, "") + "/widget_contact?api_key=" + encodeURIComponent(API_KEY), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, message })
-      });
-      const text = await res.text();
-      if (!res.ok) {
-        contactStatus.textContent = text || "Unable to send contact request.";
-        contactStatus.style.color = "#b91c1c";
-        if (res.status === 403) {
-          contactLink.style.display = "none";
-          toggleContactForm(false);
-        }
-        return;
-      }
-      contactStatus.textContent = "Thanks, we have received your message.";
-      contactStatus.style.color = "#15803d";
-      nameInput.value = "";
-      emailInput.value = "";
-      phoneInput.value = "";
-      messageInput.value = "";
-      setTimeout(() => toggleContactForm(false), 1200);
-    } catch (e) {
-      contactStatus.textContent = "Network error. Please try again.";
-      contactStatus.style.color = "#b91c1c";
-    } finally {
-      contactSend.disabled = false;
-    }
-  });
-
-  document.body.appendChild(btn);
-  document.body.appendChild(panel);
-})();
-    """
+    js_path = os.path.join(app.root_path, "static", "js", "embed.js")
+    try:
+        with open(js_path, "r", encoding="utf-8") as f:
+            js = f.read()
+    except Exception:
+        js = "// TheoChat embed.js missing or unreadable."
     return Response(js, mimetype="application/javascript")
-
 
 # ==========================
 # Billing (minimal stub)
@@ -2679,7 +2489,14 @@ def business_settings():
 # Run
 # ==========================
 if __name__ == "__main__":
-    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    debug_env = os.getenv("FLASK_DEBUG")
+    if PRODUCTION_MODE:
+        debug = debug_env is not None and debug_env.lower() == "true"
+    else:
+        if debug_env is None:
+            debug = True
+        else:
+            debug = debug_env.lower() == "true"
     app.run(host="0.0.0.0", port=5000, debug=debug)
 
 """
