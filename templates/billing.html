@@ -143,7 +143,7 @@
   }
 </style>
 
-<div class="page">
+<div class="tc-card page">
   {% if not current_user.has_active_subscription %}
     <div class="billing-trial-banner">
       <strong>Start your free trial to access Pro features.</strong>
@@ -222,7 +222,7 @@
       </div>
     </div>
     <form method="POST" action="{{ url_for('create_checkout_session') }}" style="margin: 0 0 1rem;">
-      <button type="submit" class="primary">Start 7-day free trial</button>
+      <button type="submit" class="primary tc-btn-primary">Start 7-day free trial</button>
     </form>
   {% else %}
     <div class="plan-summary">
@@ -254,8 +254,8 @@
 
   <div class="billing-header-row">
     <div>
-      <h2 style="margin:0 0 0.25rem;">Billing</h2>
-      <p style="margin:0;color:var(--muted);">Manage your TheoChat subscription.</p>
+      <h1 class="tc-h1" style="margin-bottom:0.25rem;">Billing</h1>
+      <p class="tc-subtext" style="margin:0;">Manage your TheoChat subscription.</p>
     </div>
     <div class="status-pill">
       {% if trial_status == "Subscribed" %}
@@ -329,7 +329,7 @@
           <strong>7-day free trial:</strong> You can cancel any time during your 7-day trial on this billing page and you will not be charged.
         </div>
         <form method="POST" action="{{ url_for('create_checkout_session') }}" style="margin:0 0 0.5rem;">
-          <button type="submit" class="primary">Start 7-day free trial</button>
+          <button type="submit" class="primary tc-btn-primary">Start 7-day free trial</button>
         </form>
         <p style="margin:0;font-size:0.9rem;color:var(--muted);">Payments are processed by Stripe. You can cancel any time.</p>
       </div>

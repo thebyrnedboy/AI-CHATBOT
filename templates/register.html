@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-md mx-auto space-y-4">
+<div class="tc-card max-w-md mx-auto space-y-4">
   <div>
-    <h2 class="text-xl font-semibold mb-1">Create a TheoChat account</h2>
-    <p class="text-sm text-slate-600 dark:text-slate-400">Spin up your TheoChat workspace.</p>
+    <h1 class="tc-h1" style="margin-bottom:0.35rem;">Create a TheoChat account</h1>
+    <p class="tc-subtext">Spin up your TheoChat workspace.</p>
   </div>
-  <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+  <div class="p-1">
     <form method="post" action="{{ url_for('register') }}" class="space-y-4">
       <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">
         <span class="mb-1 block">Email</span>
@@ -55,7 +55,7 @@
         <div id="pw-match-text" class="text-xs text-slate-600 dark:text-slate-400"></div>
       </div>
       <div class="text-center">
-        <button class="primary inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 border border-blue-600" type="submit">Create account</button>
+        <button class="tc-btn-primary w-full justify-center" type="submit">Create account</button>
       </div>
     </form>
     <p class="mt-4 text-center text-sm text-slate-600 dark:text-slate-400">

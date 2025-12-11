@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="tc-card">
 
 <style>
   .grid {
@@ -99,7 +100,7 @@
 
 <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
   <div>
-    <h2 style="margin:0 0 0.25rem;">Business settings</h2>
+    <h1 class="tc-h1" style="margin:0 0 0.35rem;">Business settings</h1>
     <div class="muted">Configure your TheoChat embed and business profile.</div>
   </div>
   <div style="display:flex;align-items:center;gap:0.5rem;">
@@ -121,7 +122,7 @@
     <div class="label">API key</div>
     <div class="row" style="justify-content:space-between;">
       <div class="mono" id="api-key" style="flex:1;">{{ biz.api_key }}</div>
-      <button id="copy-key" type="button" class="primary" data-copy-target="#api-key">Copy</button>
+      <button id="copy-key" type="button" class="primary tc-btn-primary" data-copy-target="#api-key">Copy</button>
     </div>
     <form method="post" action="{{ url_for('regenerate_key') }}" style="margin-top:0.6rem;">
       <button type="submit" class="danger">Regenerate key</button>
@@ -136,7 +137,7 @@
         You can still generate the embed snippet, but embeds may not work as expected until everything is set up.
       </div>
     {% endif %}
-    <button id="generate-snippet" type="button" class="primary">Generate embed snippet</button>
+    <button id="generate-snippet" type="button" class="primary tc-btn-primary">Generate embed snippet</button>
     <div id="snippet-block" style="display:none;margin-top:0.6rem;">
       <div class="relative" style="position:relative;">
         <pre id="embed-snippet" style="margin:0;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:0.75rem;overflow:auto;font-size:0.9rem;">
@@ -195,7 +196,7 @@
         <option value="elite" {% if current_user.plan == "elite" %}selected{% endif %}>Elite</option>
       </select>
       <div class="row" style="margin-top:0.5rem;justify-content:flex-start;">
-        <button class="primary" type="submit">Save plan</button>
+        <button class="primary tc-btn-primary" type="submit">Save plan</button>
         <div id="plan-status" class="muted small"></div>
       </div>
       <div class="muted small" style="margin-top:0.4rem;">
@@ -223,7 +224,7 @@
       <label class="label" for="tone">Preferred tone of voice</label>
       <textarea id="tone" name="tone" placeholder="Friendly, concise, formal, playful...">{{ profile.tone or '' }}</textarea>
       <div class="row" style="margin-top:0.5rem;justify-content:flex-start;">
-        <button class="primary" type="submit">Save profile</button>
+        <button class="primary tc-btn-primary" type="submit">Save profile</button>
         <div id="knowledge-status" class="muted"></div>
       </div>
     </form>
@@ -244,7 +245,7 @@
       <input id="import-max-pages" name="max_pages" type="number" min="1" max="10" value="5" />
       <div class="muted" style="margin-top:0.25rem;">Respects robots.txt, caps pages/size, and keeps within your domain.</div>
       <div class="row" style="margin-top:0.5rem;justify-content:flex-start;">
-        <button class="primary" type="submit">Import</button>
+        <button class="primary tc-btn-primary" type="submit">Import</button>
         <div id="import-status" class="muted"></div>
       </div>
     </form>
@@ -256,7 +257,7 @@
       <textarea name="allowed_domains" placeholder="example.com, www.example.com" style="min-height:80px;">{{ biz.allowed_domains or '' }}</textarea>
       <div class="muted small">Visitor embeds will be rejected if the referrer host is not in this list.</div>
       <div class="row" style="margin-top:0.5rem;justify-content:flex-start;">
-        <button class="primary" type="submit">Save domains</button>
+        <button class="primary tc-btn-primary" type="submit">Save domains</button>
         <div id="domains-status" class="muted"></div>
       </div>
     </form>
@@ -266,7 +267,7 @@
     <div class="label">Lead capture</div>
     <p class="muted small" style="margin:0 0 0.5rem;">Require name/email/phone before answering.</p>
     <div class="row" style="justify-content:flex-start;">
-      <button id="lead-toggle" type="button" class="primary" data-next="{{ 0 if biz.lead_capture_enabled else 1 }}">
+      <button id="lead-toggle" type="button" class="primary tc-btn-primary" data-next="{{ 0 if biz.lead_capture_enabled else 1 }}">
         {% if biz.lead_capture_enabled %}Disable{% else %}Enable{% endif %}
       </button>
       <div id="lead-status" class="muted"></div>
@@ -290,7 +291,7 @@
       <label class="label" for="hubspot_api_key" style="margin-top:0.4rem;">HubSpot API key (contacts)</label>
       <input type="text" name="hubspot_api_key" id="hubspot_api_key" value="{{ biz.hubspot_api_key or '' }}" placeholder="hs-api-key" />
       <div class="row" style="margin-top:0.5rem;justify-content:flex-start;">
-        <button class="primary" type="submit">Save notifications</button>
+        <button class="primary tc-btn-primary" type="submit">Save notifications</button>
         <div id="notify-status" class="muted"></div>
       </div>
     </form>
@@ -548,4 +549,5 @@
 })();
 </script>
 
+</div>
 {% endblock %}

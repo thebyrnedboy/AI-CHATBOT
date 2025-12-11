@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/theochat-logo-mark.png') }}">
   <link rel="shortcut icon" href="{{ url_for('static', filename='img/theochat-logo-mark.png') }}">
   <style>
@@ -35,15 +35,142 @@
 
     * {
       box-sizing: border-box;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     body {
       margin: 0;
-      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    /* TheoChat design system */
+    .tc-shell {
+      min-height: 100vh;
+      padding: 32px 16px;
+      display: flex;
+      flex-direction: column;
+      background: #f3f4f6;
+      color: #0f172a;
+    }
+
+    body.dark .tc-shell {
+      background: radial-gradient(circle at top left, #0f766e 0, #020617 55%);
+      color: #e5e7eb;
+    }
+
+    .tc-main {
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .tc-card {
+      border-radius: 24px;
+      padding: 24px 24px 28px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: #ffffff;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    body.dark .tc-card {
+      background: radial-gradient(circle at top left, rgba(15, 118, 110, 0.3) 0, rgba(15, 23, 42, 0.98) 55%);
+      border-color: rgba(30, 64, 175, 0.65);
+      box-shadow: 0 28px 80px rgba(15, 23, 42, 0.85);
+    }
+
+    .tc-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 0.65rem 1.6rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      background: #059669;
+      color: #f9fafb;
+      border: none;
+      box-shadow: 0 12px 30px rgba(5, 150, 105, 0.45);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .tc-btn-primary:hover {
+      background: #10b981;
+      box-shadow: 0 18px 40px rgba(5, 150, 105, 0.6);
+    }
+
+    body.dark .tc-btn-primary {
+      background: #10b981;
+    }
+
+    .tc-link-secondary {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #facc15;
+      text-decoration: none;
+      position: relative;
+    }
+
+    .tc-link-secondary::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -2px;
+      height: 1px;
+      border-bottom: 1px dashed currentColor;
+      opacity: 0.7;
+    }
+
+    .tc-link-secondary:hover {
+      opacity: 0.9;
+    }
+
+    .tc-pill-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-radius: 999px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: rgba(15, 23, 42, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: #0f766e;
+    }
+
+    .tc-pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #facc15;
+    }
+
+    body.dark .tc-pill-label {
+      background: rgba(15, 23, 42, 0.5);
+      border-color: rgba(45, 212, 191, 0.5);
+      color: #22c55e;
+    }
+
+    .tc-h1 {
+      font-size: clamp(2rem, 3vw, 2.6rem);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      margin-bottom: 0.75rem;
+    }
+
+    .tc-subtext {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #4b5563;
+    }
+
+    body.dark .tc-subtext {
+      color: #cbd5f5;
     }
 
     .shell {
@@ -490,6 +617,8 @@
     })();
   </script>
 
+  <div class="tc-shell">
+    <div class="tc-main">
   <div class="shell max-w-5xl mx-auto px-4 py-6">
     <header style="padding:0.5rem 0;">
       <h1 class="site-logo">
@@ -592,6 +721,8 @@
       {% block content %}{% endblock %}
     </main>
     <div style="margin-top:1rem;font-size:0.85rem;color:var(--muted);text-align:center;">© TheoChat — theochat.co.uk</div>
+  </div>
+    </div>
   </div>
 
   <script>
