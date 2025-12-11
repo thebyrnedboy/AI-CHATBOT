@@ -259,11 +259,15 @@
           </pre>
           <button
             type="button"
-            class="primary"
-            style="position:absolute;top:8px;right:8px;padding:0.3rem 0.6rem;font-size:0.8rem;"
+            aria-label="Copy embed snippet"
+            class="absolute top-2 right-2 inline-flex items-center justify-center rounded-md"
+            style="border:1px solid var(--border);background:#fff;padding:0.25rem;"
             data-copy-target="#embed-snippet-setup"
           >
-            Copy
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
           </button>
         </div>
       {% else %}

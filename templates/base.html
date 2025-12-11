@@ -567,19 +567,28 @@
       {% endif %}
     {% endwith %}
 
-    {% if current_user.is_authenticated and (current_user.has_active_subscription or current_user.is_subscribed) and api_key %}
-      <div style="margin:0.75rem 0; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; border:1px solid var(--border); border-radius:8px; padding:0.55rem 0.75rem; background: #f8fafc; font-size:0.85rem;">
-        <div style="display:flex; align-items:center; gap:0.5rem; min-width:0;">
-          <span style="font-weight:600;">API key:</span>
-          <span id="global-api-key" style="font-family: Consolas, Menlo, monospace; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px;">{{ api_key }}</span>
-        </div>
-        <button type="button" class="text-xs" data-copy-target="#global-api-key" style="font-size:0.75rem; padding:0.3rem 0.55rem; border-radius:6px; border:1px solid var(--border); background:#fff; cursor:pointer;">
-          Copy
-        </button>
-      </div>
-    {% endif %}
-
     <main>
+      {% if current_user.is_authenticated and api_key %}
+        <div style="display:flex;align-items:flex-start;justify-content:flex-end;gap:0.75rem;flex-wrap:wrap;">
+          <div class="api-key-pill" style="position:relative; min-width:240px;">
+            <strong>API key</strong><br>
+            <code id="api-key-display">{{ api_key }}</code>
+            <button
+              type="button"
+              aria-label="Copy API key"
+              data-copy-target="#api-key-display"
+              class="absolute top-2 right-2 inline-flex items-center justify-center rounded-md"
+              style="border:1px solid var(--border);background:#fff;padding:0.25rem;"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      {% endif %}
+
       {% block content %}{% endblock %}
     </main>
     <div style="margin-top:1rem;font-size:0.85rem;color:var(--muted);text-align:center;">© TheoChat — theochat.co.uk</div>
