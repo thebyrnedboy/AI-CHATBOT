@@ -1045,13 +1045,26 @@
               eye.classList.remove("password-eye--active");
           };
 
-          eye.addEventListener("mousedown", () => showPassword());
-          eye.addEventListener("touchstart", () => showPassword());
+          const isMobile = window.matchMedia && window.matchMedia("(max-width: 768px)").matches;
 
-          eye.addEventListener("mouseup", () => hidePassword());
-          eye.addEventListener("mouseleave", () => hidePassword());
-          eye.addEventListener("touchend", () => hidePassword());
-          eye.addEventListener("touchcancel", () => hidePassword());
+          if (isMobile) {
+            eye.addEventListener("click", (e) => {
+              e.preventDefault();
+              if (input.type === "password") {
+                showPassword();
+              } else {
+                hidePassword();
+              }
+            });
+          } else {
+            eye.addEventListener("mousedown", () => showPassword());
+            eye.addEventListener("touchstart", () => showPassword());
+
+            eye.addEventListener("mouseup", () => hidePassword());
+            eye.addEventListener("mouseleave", () => hidePassword());
+            eye.addEventListener("touchend", () => hidePassword());
+            eye.addEventListener("touchcancel", () => hidePassword());
+          }
       });
     });
 
