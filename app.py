@@ -11,6 +11,7 @@ from collections import Counter
 import stripe
 import smtplib
 import json
+from io import BytesIO
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -65,6 +66,12 @@ DEFAULT_BUSINESS_NAME = os.getenv("DEFAULT_BUSINESS_NAME", "Default Business")
 MAX_HISTORY = 20
 MAX_CHUNKS = 3000  # simple storage guard
 USER_AGENT = "AI-CHATBOT/1.0 (+https://example.com)"
+MAX_IMPORT_PAGES = int(os.getenv("MAX_IMPORT_PAGES", "100"))
+MAX_IMPORT_DEPTH = int(os.getenv("MAX_IMPORT_DEPTH", "3"))
+IMPORT_REQUEST_TIMEOUT = int(os.getenv("IMPORT_REQUEST_TIMEOUT", "12"))
+MAX_TOTAL_EXTRACTED_CHARS = int(os.getenv("MAX_TOTAL_EXTRACTED_CHARS", str(2_000_000)))
+MAX_SINGLE_ITEM_CHARS = int(os.getenv("MAX_SINGLE_ITEM_CHARS", str(200_000)))
+MAX_IMPORT_SECONDS = int(os.getenv("MAX_IMPORT_SECONDS", "45"))
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip()
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
@@ -726,6 +733,138 @@ def fetch_page_text(url: str, base_origin: str, max_chars: int = 15000):
     if len(text) < 50:
         return None, None, "No readable text found"
     return text, resp.text, None
+
+
+def normalize_crawl_url(url: str) -> Optional[str]:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    path = parsed.path or "/"
+    # normalize trailing slash
+    if path != "/" and path.endswith("/"):
+        path = path.rstrip("/")
+    # strip fragments and common tracking params
+    query_parts = []
+    for part in (parsed.query or "").split("&"):
+        if not part:
+            continue
+        key = part.split("=", 1)[0].lower()
+        if key.startswith(("utm_", "fbclid", "gclid", "mc_eid")):
+            continue
+        query_parts.append(part)
+    new_query = "&".join(query_parts)
+    normalized = parsed._replace(fragment="", path=path, query=new_query)
+    return normalized.geturl()
+
+
+def is_low_value_path(path: str) -> bool:
+    low_value = {
+        "/login",
+        "/signin",
+        "/register",
+        "/logout",
+        "/billing",
+        "/setup",
+        "/business",
+        "/knowledge",
+        "/contact_requests",
+        "/stripe",
+        "/webhook",
+        "/static",
+        "/embed.js",
+    }
+    for lp in low_value:
+        if path.startswith(lp):
+            return True
+    return False
+
+
+def detect_login_wall(url: str, status_code: int, html_text: str | None) -> bool:
+    if status_code in (401, 403):
+        return True
+    try:
+        parsed = urlparse(url)
+        path = parsed.path.lower()
+    except Exception:
+        path = ""
+    if any(part in path for part in ["/login", "/signin", "/account"]):
+        return True
+    if not html_text:
+        return False
+    # lightweight detection of login-only pages
+    soup = BeautifulSoup(html_text, "html.parser")
+    if soup.find("input", {"type": "password"}):
+        # treat near-empty copy as an auth wall
+        text = extract_text_from_html(html_text)
+        if len(text) < 120:
+            return True
+    return False
+
+
+def extract_pdf_bytes(data: bytes) -> str:
+    try:
+        from PyPDF2 import PdfReader
+    except ImportError:
+        raise RuntimeError("PyPDF2 is not installed. Run: pip install PyPDF2")
+    reader = PdfReader(BytesIO(data))
+    parts = []
+    for page in reader.pages:
+        try:
+            parts.append(page.extract_text() or "")
+        except Exception:
+            continue
+    return "\n".join(parts)
+
+
+def fetch_and_extract(url: str, base_origin: str, max_chars: int) -> Tuple[Optional[str], Optional[str], List[str], bool, Optional[str]]:
+    if not allowed_by_robots(base_origin, url):
+        return None, None, [], False, "Blocked by robots.txt"
+    try:
+        resp = requests.get(url, timeout=IMPORT_REQUEST_TIMEOUT, headers={"User-Agent": USER_AGENT}, allow_redirects=True)
+    except Exception as e:
+        return None, None, [], False, f"Request failed: {str(e)}"
+
+    final_url = resp.url or url
+    status = resp.status_code
+    ct = resp.headers.get("content-type", "").lower()
+    is_login = detect_login_wall(final_url, status, resp.text if "text" in ct else None)
+    if status != 200:
+        return None, None, [], is_login, f"Request returned {status}"
+
+    links: List[str] = []
+    text: Optional[str] = None
+    html_content: Optional[str] = None
+
+    if "pdf" in ct or final_url.lower().endswith(".pdf"):
+        try:
+            text = extract_pdf_bytes(resp.content)[:max_chars]
+        except Exception as e:
+            return None, None, [], is_login, f"PDF extraction failed: {e}"
+    elif "text/html" in ct or "text/" in ct:
+        html_content = resp.text or ""
+        soup = BeautifulSoup(html_content, "html.parser")
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        text = " ".join(soup.get_text(separator=" ").split())[:max_chars]
+
+        for a in soup.find_all("a", href=True):
+            href = a.get("href")
+            if not href:
+                continue
+            abs_url = urljoin(final_url, href)
+            norm = normalize_crawl_url(abs_url)
+            if norm:
+                links.append(norm)
+    elif "image/" in ct:
+        # keep behavior: skip images without adding heavy OCR
+        return None, None, [], is_login, "Skipped image content"
+    else:
+        return None, None, [], is_login, "Unsupported content type"
+
+    return text, html_content, links, is_login, None
 
 
 def _is_greyish(color: str) -> bool:
@@ -1665,9 +1804,72 @@ def import_site():
         return redirect(url_for("knowledge"))
 
     base_origin = f"{parsed.scheme}://{parsed.netloc}"
-    text, html_content, err = fetch_page_text(url, base_origin, max_chars=15000)
-    if err or not text:
-        flash(err or "No readable text found. Please check the website and try again.", "error")
+    base_host = normalize_host(parsed.netloc)
+    start_time = time.time()
+
+    queue: List[Tuple[str, int]] = [(url, 0)]
+    visited: set[str] = set()
+    collected_texts: List[str] = []
+    html_content: Optional[str] = None
+    total_chars = 0
+    pages_imported = 0
+    limit_hit_reason = ""
+
+    while queue:
+        if time.time() - start_time > MAX_IMPORT_SECONDS:
+            limit_hit_reason = "time"
+            break
+        current_url, depth = queue.pop(0)
+        if depth > MAX_IMPORT_DEPTH:
+            continue
+        norm = normalize_crawl_url(current_url)
+        if not norm or norm in visited:
+            continue
+        visited.add(norm)
+
+        text, page_html, links, is_login, err = fetch_and_extract(norm, base_origin, MAX_SINGLE_ITEM_CHARS)
+        if err:
+            continue
+
+        if page_html and not html_content:
+            html_content = page_html
+
+        if text:
+            # enforce per-item and total character budgets
+            bounded_text = text[:MAX_SINGLE_ITEM_CHARS]
+            if total_chars + len(bounded_text) > MAX_TOTAL_EXTRACTED_CHARS:
+                remaining = max(0, MAX_TOTAL_EXTRACTED_CHARS - total_chars)
+                bounded_text = bounded_text[:remaining]
+                limit_hit_reason = limit_hit_reason or "char"
+            if bounded_text:
+                collected_texts.append(bounded_text)
+                total_chars += len(bounded_text)
+                pages_imported += 1
+            if total_chars >= MAX_TOTAL_EXTRACTED_CHARS:
+                break
+            if pages_imported >= MAX_IMPORT_PAGES:
+                limit_hit_reason = limit_hit_reason or "pages"
+                break
+
+        if depth >= MAX_IMPORT_DEPTH or is_login:
+            continue
+
+        for link in links:
+            try:
+                parsed_link = urlparse(link)
+            except Exception:
+                continue
+            if normalize_host(parsed_link.netloc) != base_host:
+                continue
+            if is_low_value_path(parsed_link.path):
+                continue
+            normalized_child = normalize_crawl_url(link)
+            if not normalized_child or normalized_child in visited:
+                continue
+            queue.append((normalized_child, depth + 1))
+
+    if not collected_texts:
+        flash("No readable text found. Please check the website and try again.", "error")
         return redirect(url_for("knowledge"))
 
     user_id = int(current_user.id)
@@ -1689,7 +1891,8 @@ def import_site():
     conn.commit()
     conn.close()
 
-    chunks = chunk_text(text, max_chars=500)
+    combined_text = "\n\n".join(collected_texts)
+    chunks = chunk_text(combined_text, max_chars=500)
     existing = get_chunk_count(user_id, biz_id)
     if existing + len(chunks) > MAX_CHUNKS:
         flash("Storage limit reached. Remove files to add more.", "error")
@@ -1749,7 +1952,15 @@ def import_site():
     finally:
         conn.close()
 
-    flash("Website content import completed. It may take a moment for all content to be available.", "success")
+    limit_note = ""
+    if limit_hit_reason == "time":
+        limit_note = f" Imported the first {pages_imported} pages before the time limit."
+    elif limit_hit_reason == "pages":
+        limit_note = f" Imported the first {pages_imported} pages (page limit reached)."
+    elif limit_hit_reason == "char":
+        limit_note = f" Imported the first {pages_imported} pages (size limit reached)."
+
+    flash(f"Website content import completed.{limit_note} It may take a moment for all content to be available.", "success")
     return redirect(url_for("knowledge"))
 # ==========================
 # Chat
