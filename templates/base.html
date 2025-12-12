@@ -216,6 +216,14 @@
       color: rgba(100, 116, 139, 0.9);
     }
 
+    .tc-input-valid {
+      border-color: #22c55e;
+    }
+
+    .tc-input-invalid {
+      border-color: #ef4444;
+    }
+
     .dark .tc-input {
       background: rgba(15, 23, 42, 0.96);
       border-color: rgba(148, 163, 184, 0.9);
@@ -300,6 +308,69 @@
       display: block;
       line-height: 1.5;
       white-space: pre;
+    }
+
+    .tc-rule-valid {
+      color: #22c55e !important;
+    }
+
+    .tc-rule-invalid {
+      color: #94a3b8 !important;
+    }
+
+    .dark .tc-rule-invalid {
+      color: #9ca3af !important;
+    }
+
+    .pw-traffic {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      margin-top: 0.2rem;
+    }
+
+    .pw-light {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.4);
+      transition: background 0.2s ease, opacity 0.2s ease;
+      opacity: 0.7;
+    }
+
+    .pw-light.active-weak {
+      background: #ef4444;
+      opacity: 1;
+    }
+
+    .pw-light.active-medium {
+      background: #f59e0b;
+      opacity: 1;
+    }
+
+    .pw-light.active-strong {
+      background: #22c55e;
+      opacity: 1;
+    }
+
+    .tc-strength-weak {
+      color: #ef4444;
+    }
+
+    .tc-strength-medium {
+      color: #f59e0b;
+    }
+
+    .tc-strength-strong {
+      color: #22c55e;
+    }
+
+    .tc-match-valid {
+      color: #22c55e;
+    }
+
+    .tc-match-invalid {
+      color: #ef4444;
     }
 
     @media (max-width: 768px) {
@@ -1070,36 +1141,77 @@
 
     document.addEventListener("DOMContentLoaded", function () {
       const passwordInput = document.getElementById("password");
+      const confirmInput = document.getElementById("confirm_password");
       const strengthText = document.getElementById("password-strength-text");
       const strengthLabel = document.getElementById("password-strength-label");
       const strengthFill = document.getElementById("pw-strength-fill");
       const rulesList = document.getElementById("password-rules");
+      const trafficLights = document.querySelectorAll("#pw-traffic .pw-light");
+      const matchText = document.getElementById("pw-match-text");
 
       if (!passwordInput || !strengthText || !rulesList) {
         return;
       }
 
-      const ruleItems = rulesList.querySelectorAll("li[data-rule]");
+      const ruleItems = Array.from(rulesList.querySelectorAll("li[data-rule]"));
 
-      function updateStrength(value) {
-        const checks = {
+      function evaluateChecks(value) {
+        return {
           length: value.length >= 8,
           upper: /[A-Z]/.test(value),
           lower: /[a-z]/.test(value),
           digit: /[0-9]/.test(value),
-          special: /[^A-Za-z0-9]/.test(value)
+          special: /[^A-Za-z0-9]/.test(value),
         };
+      }
 
+      function updateRuleStates(checks) {
+        ruleItems.forEach((item) => {
+          const key = item.getAttribute("data-rule");
+          const ok = key && checks[key];
+          item.classList.toggle("tc-rule-valid", !!ok);
+          item.classList.toggle("tc-rule-invalid", !ok);
+          const icon = item.querySelector(".pw-rule-icon");
+          if (icon) {
+            icon.textContent = ok ? "✓" : "•";
+          }
+        });
+      }
+
+      function applyTraffic(level) {
+        trafficLights.forEach((light, idx) => {
+          light.classList.remove("active-weak", "active-medium", "active-strong");
+          const shouldActivate =
+            (level === 0 && idx === 0) ||
+            (level === 1 && idx <= 1) ||
+            (level === 2 && idx <= 2);
+          if (!shouldActivate) return;
+          const cls = idx === 0 ? "active-weak" : idx === 1 ? "active-medium" : "active-strong";
+          light.classList.add(cls);
+        });
+      }
+
+      function updateStrength(value, checks) {
         const met = Object.values(checks).filter(Boolean).length;
+        const bonus = value.length >= 12 ? 1 : 0;
+        const score = met + bonus;
+
         let status = "Too weak";
         let color = "#ef4444";
-        if (met >= 4 && value.length >= 10) {
+        let level = 0; // 0 weak,1 medium,2 strong
+
+        if (score >= 5) {
           status = "Strong";
           color = "#22c55e";
-        } else if (met >= 3 && value.length >= 8) {
+          level = 2;
+        } else if (score >= 3) {
           status = "Medium";
           color = "#f59e0b";
+          level = 1;
         }
+
+        strengthText.classList.remove("tc-strength-weak", "tc-strength-medium", "tc-strength-strong");
+        strengthText.classList.add(level === 0 ? "tc-strength-weak" : level === 1 ? "tc-strength-medium" : "tc-strength-strong");
 
         if (strengthLabel) {
           strengthLabel.textContent = status;
@@ -1108,25 +1220,45 @@
         }
 
         if (strengthFill) {
-          const width = Math.min(100, met * 20 + (value.length > 12 ? 10 : 0));
+          const width = Math.min(100, Math.max(10, (score / 6) * 100));
           strengthFill.style.width = width + "%";
           strengthFill.style.background = color;
         }
 
-        ruleItems.forEach((item) => {
-          const key = item.getAttribute("data-rule");
-          const ok = key && checks[key];
-          item.classList.toggle("text-emerald-500", !!ok);
-          item.classList.toggle("dark:text-emerald-300", !!ok);
-          item.classList.toggle("text-slate-500", !ok);
-          item.classList.toggle("dark:text-slate-400", !ok);
-        });
+        applyTraffic(level);
       }
 
-      updateStrength(passwordInput.value || "");
-      passwordInput.addEventListener("input", function (e) {
-        updateStrength(e.target.value || "");
-      });
+      function updateConfirmState() {
+        if (!confirmInput || !matchText) return;
+        const pwd = passwordInput.value || "";
+        const conf = confirmInput.value || "";
+        if (!conf) {
+          confirmInput.classList.remove("tc-input-valid", "tc-input-invalid");
+          matchText.textContent = "";
+          matchText.classList.remove("tc-match-valid", "tc-match-invalid");
+          return;
+        }
+        const matches = pwd === conf;
+        confirmInput.classList.toggle("tc-input-valid", matches);
+        confirmInput.classList.toggle("tc-input-invalid", !matches);
+        matchText.textContent = matches ? "Passwords match" : "Passwords do not match";
+        matchText.classList.toggle("tc-match-valid", matches);
+        matchText.classList.toggle("tc-match-invalid", !matches);
+      }
+
+      function handlePasswordInput() {
+        const val = passwordInput.value || "";
+        const checks = evaluateChecks(val);
+        updateRuleStates(checks);
+        updateStrength(val, checks);
+        updateConfirmState();
+      }
+
+      handlePasswordInput();
+      passwordInput.addEventListener("input", handlePasswordInput);
+      if (confirmInput) {
+        confirmInput.addEventListener("input", updateConfirmState);
+      }
     });
 
   </script>
