@@ -93,27 +93,91 @@
     background: #0b1224;
     border-color: #1f2937;
   }
+
+  /* Demo helper (marketing only) */
+  #demo-widget-helper {
+    position: fixed;
+    bottom: 110px;
+    right: 24px;
+    max-width: 260px;
+    background: linear-gradient(135deg, rgba(10,20,30,0.95), rgba(5,10,20,0.95));
+    border: 1px solid rgba(100,180,200,0.25);
+    border-radius: 14px;
+    padding: 12px 14px 14px;
+    color: #e6f2f5;
+    font-size: 13px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    z-index: 9998;
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  #demo-widget-helper.is-visible {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .demo-widget-helper__close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: #e6f2f5;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .demo-widget-helper__close:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.3);
+    transform: scale(1.05);
+  }
+
+  .demo-widget-helper__close:focus {
+    outline: 2px solid rgba(255,255,255,0.4);
+    outline-offset: 2px;
+  }
+
+  #demo-widget-helper p {
+    margin: 6px 0 0;
+    opacity: 0.9;
+  }
+
+  @media (max-width: 480px) {
+    #demo-widget-helper {
+      bottom: 90px;
+      right: 12px;
+      max-width: 220px;
+      font-size: 12px;
+    }
+    .demo-widget-helper__close {
+      width: 32px;
+      height: 32px;
+    }
+  }
 </style>
 
 <div class="tc-card marketing-page space-y-6">
-  {% if demo_api_key %}
-  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5">
-    <h2 class="tc-h2" style="margin:0 0 0.35rem;">This is how TheoChat will look on your site</h2>
-    <p class="tc-subtext" style="margin:0 0 0.6rem;">Try it now â ask Theo about TheoChat.</p>
-    <div style="border:1px dashed var(--border);border-radius:12px;padding:0.75rem;background:var(--card);">
-      <script src="{{ embed_base }}/embed.js?api_key={{ demo_api_key }}" async></script>
-    </div>
-  </section>
-  {% endif %}
-
   <section class="hero">
     <div class="hero-layout">
       <div class="hero-content-block">
         <div class="tc-pill-label mb-4">
           <span class="tc-pill-dot"></span>
-          <span>7-day free trial Â· Cancel anytime</span>
+          <span>7-day free trial — Cancel anytime</span>
         </div>
-        <h1 class="tc-h1">Meet Theo â your website's AI assistant.</h1>
+        <h1 class="tc-h1">Meet Theo — your website's AI assistant.</h1>
         <p class="tc-subtext mb-4">Answer questions, capture leads, and assist customers 24/7 with a smart AI trained on your business.</p>
         <div class="hero-actions" style="display:flex;flex-wrap:wrap;align-items:center;gap:0.75rem;">
           <a href="{{ url_for('register') }}" class="tc-btn-primary">Start free 7-day trial</a>
@@ -138,29 +202,29 @@
   <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
     <h2 class="text-xl font-semibold mb-2">How it works</h2>
     <ol class="steps text-sm text-slate-700 dark:text-slate-300">
-      <li><strong>Add your business info</strong> â Upload documents, FAQs, and service details. Theo learns from your content.</li>
-      <li><strong>Paste one small code snippet</strong> â Install the TheoChat widget on any website in under 30 seconds.</li>
-      <li><strong>Theo assists your visitors</strong> â Visitors get fast, accurate answers based on your own content, 24/7.</li>
+      <li><strong>Add your business info</strong> — Upload documents, FAQs, and service details. Theo learns from your content.</li>
+      <li><strong>Paste one small code snippet</strong> — Install the TheoChat widget on any website in under 30 seconds.</li>
+      <li><strong>Theo assists your visitors</strong> — Visitors get fast, accurate answers based on your own content, 24/7.</li>
     </ol>
   </section>
 
   <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
     <h2 class="text-xl font-semibold mb-2">Why TheoChat?</h2>
     <div class="why-list">
-      <div class="why-card"><strong>Instant setup</strong> â No developers required. TheoChat is ready in minutes.</div>
-      <div class="why-card"><strong>Knows your business</strong> â Theo uses your documents and website content to answer accurately.</div>
-      <div class="why-card"><strong>Converts visitors</strong> â Capture contact details and questions directly from the widget.</div>
-      <div class="why-card"><strong>Lightweight widget</strong> â Fast, mobile-friendly chat bubble that fits into your brand.</div>
-      <div class="why-card"><strong>Changes to website?</strong> â Update your site, click one button, TheoChat re-learns it.</div>
-      <div class="why-card"><strong>Simple pricing</strong> â 7-day free trial, then Â£19/month.</div>
+      <div class="why-card"><strong>Instant setup</strong> — No developers required. TheoChat is ready in minutes.</div>
+      <div class="why-card"><strong>Knows your business</strong> — Theo uses your documents and website content to answer accurately.</div>
+      <div class="why-card"><strong>Converts visitors</strong> — Capture contact details and questions directly from the widget.</div>
+      <div class="why-card"><strong>Lightweight widget</strong> — Fast, mobile-friendly chat bubble that fits into your brand.</div>
+      <div class="why-card"><strong>Changes to website?</strong> — Update your site, click one button, TheoChat re-learns it.</div>
+      <div class="why-card"><strong>Simple pricing</strong> — 7-day free trial, then £19/month.</div>
     </div>
   </section>
 
   <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
     <h2 class="text-xl font-semibold mb-2 text-center">Testimonials</h2>
     <div class="testimonials">
-      <div class="testimonial">âTheoChat reduced our support emails by 40% in the first week.â<br><em>â Local business owner</em></div>
-      <div class="testimonial">âFinally, a chatbot that actually understands our services.â<br><em>â Agency founder</em></div>
+      <div class="testimonial">“TheoChat reduced our support emails by 40% in the first week.”<br><em>— Local business owner</em></div>
+      <div class="testimonial">“Finally, a chatbot that actually understands our services.”<br><em>— Agency founder</em></div>
     </div>
   </section>
 
@@ -168,15 +232,20 @@
     <h2 class="text-xl font-semibold mb-2">Ready to put TheoChat to work for you?</h2>
     <p class="text-slate-600 dark:text-slate-400 mb-2">Get started in minutes. No code, no complex setup.</p>
     <a href="{{ url_for('register') }}" class="inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 border border-blue-600">Create your account</a>
-    <p class="hero-note" style="margin-top:0.5rem;">Meet Theo â your websiteâs new AI assistant.</p>
+    <p class="hero-note" style="margin-top:0.5rem;">Meet Theo — your website’s new AI assistant.</p>
   </section>
 </div>
+
 {% if demo_api_key %}
 <div id="demo-widget-helper" class="demo-widget-helper" role="note" aria-label="TheoChat demo helper">
-  <button type="button" class="demo-widget-helper__close" aria-label="Dismiss demo helper">x</button>
+  <button type="button" class="demo-widget-helper__close" aria-label="Dismiss">×</button>
   <strong>This is how TheoChat will look on your site</strong>
-  <p>Try it now - ask Theo about TheoChat.</p>
+  <p>Try it now — ask Theo about TheoChat.</p>
 </div>
+{% if request.args.get('debug_widget') %}
+<!-- TheoChat demo: demo_api_key_present={{ (demo_api_key is not none and demo_api_key != '') | tojson }} embed_base={{ embed_base|default('')|tojson }} -->
+{% endif %}
+<div id="demo-widget-debug" style="display:none;position:fixed;bottom:8px;right:8px;z-index:9998;background:rgba(15,23,42,0.95);color:#e5e7eb;border:1px solid rgba(148,163,184,0.4);border-radius:10px;padding:10px;max-width:320px;font-size:12px;line-height:1.4;"></div>
 <script>
   (function() {
     const helper = document.getElementById('demo-widget-helper');
@@ -226,6 +295,62 @@
     function cleanup() {
       if (observer) observer.disconnect();
       document.removeEventListener('click', clickListener, true);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const debugMode = params.get('debug_widget') === '1';
+    const debugPanel = document.getElementById('demo-widget-debug');
+    const demoApiKey = "{{ demo_api_key }}";
+    const embedBase = "{{ embed_base }}";
+    const maskedKey = demoApiKey ? (demoApiKey.length > 8 ? demoApiKey.slice(0,4) + '…' + demoApiKey.slice(-4) : demoApiKey) : 'none';
+
+    function setDebug(text) {
+      if (!debugMode || !debugPanel) return;
+      debugPanel.style.display = 'block';
+      debugPanel.innerHTML = text;
+    }
+
+    if (debugMode) {
+      setDebug(
+        `<div><strong>Widget debug</strong></div>
+         <div>embed_base: ${embedBase || '(empty)'}</div>
+         <div>demo_api_key: ${maskedKey}</div>
+         <div id="dbg-embed-status">embed.js: loading…</div>
+         <div id="dbg-config-status">widget_config: pending</div>`
+      );
+    }
+
+    if (demoApiKey) {
+      const script = document.createElement('script');
+      script.src = `${embedBase}/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
+      script.async = true;
+      script.onload = () => {
+        if (debugMode) {
+          const el = document.getElementById('dbg-embed-status');
+          if (el) el.textContent = 'embed.js: loaded';
+        }
+      };
+      script.onerror = () => {
+        if (debugMode) {
+          const el = document.getElementById('dbg-embed-status');
+          if (el) el.textContent = 'embed.js: failed to load';
+        }
+      };
+      document.head.appendChild(script);
+
+      if (debugMode) {
+        fetch(`${embedBase}/widget_config?api_key=${encodeURIComponent(demoApiKey)}`)
+          .then(async (res) => {
+            const text = await res.text();
+            const snippet = text.slice(0, 120).replace(/\\s+/g, ' ');
+            const el = document.getElementById('dbg-config-status');
+            if (el) el.textContent = `widget_config: ${res.status} ${snippet}`;
+          })
+          .catch((err) => {
+            const el = document.getElementById('dbg-config-status');
+            if (el) el.textContent = `widget_config error: ${err && err.message ? err.message : 'unknown error'}`;
+          });
+      }
     }
   })();
 </script>

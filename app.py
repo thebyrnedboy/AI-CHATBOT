@@ -61,6 +61,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com").lower()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
+DEMO_API_KEY = (os.getenv("DEMO_API_KEY") or "").strip()
+EMBED_BASE_URL = (os.getenv("EMBED_BASE_URL") or "").strip()
 THEOCHAT_DEMO_API_KEY = (os.getenv("THEOCHAT_DEMO_API_KEY") or "").strip()
 DB_PATH = os.getenv("DATABASE_PATH", "app.db")
 # Simple startup log to confirm which database file is in use (useful for Railway volumes)
@@ -231,6 +233,8 @@ def generate_api_key() -> str:
 
 
 def get_demo_api_key() -> Optional[str]:
+    if DEMO_API_KEY:
+        return DEMO_API_KEY
     if THEOCHAT_DEMO_API_KEY:
         return THEOCHAT_DEMO_API_KEY
     conn = get_db_connection()
@@ -1660,7 +1664,13 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
     demo_api_key = get_demo_api_key()
-    embed_base = request.host_url.rstrip("/")
+    embed_base = EMBED_BASE_URL or request.host_url.rstrip("/")
+    print(
+        "[TheoChat] marketing demo_api_key present:",
+        bool(demo_api_key),
+        "prefix:",
+        (demo_api_key[:8] + "..." if demo_api_key else "NONE"),
+    )
     return render_template("marketing.html", demo_api_key=demo_api_key, embed_base=embed_base)
 
 
@@ -1857,7 +1867,13 @@ def marketing():
     except Exception:
         pass
     demo_api_key = get_demo_api_key()
-    embed_base = request.host_url.rstrip("/")
+    embed_base = EMBED_BASE_URL or request.host_url.rstrip("/")
+    print(
+        "[TheoChat] marketing demo_api_key present:",
+        bool(demo_api_key),
+        "prefix:",
+        (demo_api_key[:8] + "..." if demo_api_key else "NONE"),
+    )
     return render_template("marketing.html", demo_api_key=demo_api_key, embed_base=embed_base)
 
 
