@@ -71,9 +71,12 @@ USER_AGENT = "AI-CHATBOT/1.0 (+https://example.com)"
 MAX_IMPORT_PAGES = int(os.getenv("MAX_IMPORT_PAGES", "100"))
 MAX_IMPORT_DEPTH = int(os.getenv("MAX_IMPORT_DEPTH", "3"))
 IMPORT_REQUEST_TIMEOUT = int(os.getenv("IMPORT_REQUEST_TIMEOUT", "12"))
+IMPORT_CONNECT_TIMEOUT = int(os.getenv("IMPORT_CONNECT_TIMEOUT", "4"))
+IMPORT_READ_TIMEOUT = int(os.getenv("IMPORT_READ_TIMEOUT", "12"))
 MAX_TOTAL_EXTRACTED_CHARS = int(os.getenv("MAX_TOTAL_EXTRACTED_CHARS", str(2_000_000)))
 MAX_SINGLE_ITEM_CHARS = int(os.getenv("MAX_SINGLE_ITEM_CHARS", str(200_000)))
 MAX_IMPORT_SECONDS = int(os.getenv("MAX_IMPORT_SECONDS", "45"))
+GUNICORN_SAFE_BUDGET_SECONDS = int(os.getenv("IMPORT_SAFE_BUDGET_SECONDS", "25"))
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip()
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
@@ -663,7 +666,11 @@ def extract_text_from_html(html: str) -> str:
 def allowed_by_robots(base_url: str, target_url: str) -> bool:
     try:
         robots_url = urljoin(base_url, "/robots.txt")
-        resp = requests.get(robots_url, timeout=IMPORT_REQUEST_TIMEOUT, headers={"User-Agent": USER_AGENT})
+        resp = requests.get(
+            robots_url,
+            timeout=(IMPORT_CONNECT_TIMEOUT, IMPORT_READ_TIMEOUT),
+            headers={"User-Agent": USER_AGENT},
+        )
         if resp.status_code >= 400:
             return True
         rp = robotparser.RobotFileParser()
@@ -729,7 +736,11 @@ def fetch_page_text(url: str, base_origin: str, max_chars: int = 15000):
     if not allowed_by_robots(base_origin, url):
         return None, None, "Blocked by robots.txt"
     try:
-        resp = requests.get(url, timeout=10, headers={"User-Agent": USER_AGENT})
+        resp = requests.get(
+            url,
+            timeout=(IMPORT_CONNECT_TIMEOUT, IMPORT_READ_TIMEOUT),
+            headers={"User-Agent": USER_AGENT},
+        )
     except Exception as e:
         return None, None, f"Request failed: {str(e)}"
     if resp.status_code != 200:
@@ -829,7 +840,7 @@ def fetch_and_extract(url: str, base_origin: str, max_chars: int) -> Tuple[Optio
     try:
         resp = requests.get(
             url,
-            timeout=IMPORT_REQUEST_TIMEOUT,
+            timeout=(IMPORT_CONNECT_TIMEOUT, IMPORT_READ_TIMEOUT),
             headers={
                 "User-Agent": USER_AGENT,
                 "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
@@ -1848,8 +1859,12 @@ def import_site():
                 samples.append(sample_url)
 
         while queue:
-            if time.time() - start_time > MAX_IMPORT_SECONDS:
+            elapsed = time.time() - start_time
+            if elapsed > MAX_IMPORT_SECONDS:
                 limit_hit_reason = "time"
+                break
+            if elapsed > GUNICORN_SAFE_BUDGET_SECONDS:
+                limit_hit_reason = limit_hit_reason or "budget"
                 break
             current_url, depth = queue.pop(0)
             if depth > MAX_IMPORT_DEPTH:
@@ -2022,6 +2037,8 @@ def import_site():
         limit_note = f" Imported the first {pages_imported} pages (page limit reached)."
     elif limit_hit_reason == "char":
         limit_note = f" Imported the first {pages_imported} pages (size limit reached)."
+    elif limit_hit_reason == "budget":
+        limit_note = f" Imported the first {pages_imported} pages before the server time budget."
 
     flash(f"Website content import completed.{limit_note} It may take a moment for all content to be available.", "success")
     return redirect(url_for("knowledge"))
