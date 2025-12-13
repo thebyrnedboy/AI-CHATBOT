@@ -313,7 +313,7 @@
   }
 </style>
 
-<div class="tc-card page">
+<div class="tc-card page" data-has-imported-website="{{ 'true' if imported_website_url else 'false' }}">
   <div class="header-row">
     <div>
       <h1 class="tc-h1" style="margin-bottom:0.35rem;">TheoChat dashboard</h1>
@@ -546,7 +546,8 @@ const fileInput = document.getElementById("file-input");
 const labelInput = document.getElementById("upload-label");
 const websiteUrlInput = document.getElementById("website-url-input");
 const websiteImportButton = document.getElementById("website-import-button");
-const hasImportedWebsiteUrl = {{ 'true' if imported_website_url else 'false' }};
+const dashboardEl = document.querySelector(".tc-card.page");
+const hasImportedWebsiteUrl = dashboardEl?.dataset.hasImportedWebsite === "true";
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!hasImportedWebsiteUrl) return;

@@ -822,14 +822,23 @@ def fetch_and_extract(url: str, base_origin: str, max_chars: int) -> Tuple[Optio
     if not allowed_by_robots(base_origin, url):
         return None, None, [], False, "Blocked by robots.txt"
     try:
-        resp = requests.get(url, timeout=IMPORT_REQUEST_TIMEOUT, headers={"User-Agent": USER_AGENT}, allow_redirects=True)
+        resp = requests.get(
+            url,
+            timeout=IMPORT_REQUEST_TIMEOUT,
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
+            },
+            allow_redirects=True,
+        )
     except Exception as e:
         return None, None, [], False, f"Request failed: {str(e)}"
 
     final_url = resp.url or url
     status = resp.status_code
     ct = resp.headers.get("content-type", "").lower()
-    is_login = detect_login_wall(final_url, status, resp.text if "text" in ct else None)
+    is_textual = ("text" in ct) or ("html" in ct)
+    is_login = detect_login_wall(final_url, status, resp.text if is_textual else None)
     if status != 200:
         return None, None, [], is_login, f"Request returned {status}"
 
@@ -842,7 +851,7 @@ def fetch_and_extract(url: str, base_origin: str, max_chars: int) -> Tuple[Optio
             text = extract_pdf_bytes(resp.content)[:max_chars]
         except Exception as e:
             return None, None, [], is_login, f"PDF extraction failed: {e}"
-    elif "text/html" in ct or "text/" in ct:
+    elif ("text/html" in ct) or ("application/xhtml+xml" in ct) or ("html" in ct) or ("text/" in ct):
         html_content = resp.text or ""
         soup = BeautifulSoup(html_content, "html.parser")
         for tag in soup(["script", "style", "noscript"]):
@@ -1812,6 +1821,15 @@ def import_site():
     total_chars = 0
     pages_imported = 0
     limit_hit_reason = ""
+    skip_reasons: Counter[str] = Counter()
+    skip_samples: Dict[str, List[str]] = {}
+    imported_samples: List[str] = []
+
+    def record_skip(reason: str, sample_url: str):
+        skip_reasons[reason] += 1
+        samples = skip_samples.setdefault(reason, [])
+        if len(samples) < 3:
+            samples.append(sample_url)
 
     while queue:
         if time.time() - start_time > MAX_IMPORT_SECONDS:
@@ -1826,7 +1844,10 @@ def import_site():
         visited.add(norm)
 
         text, page_html, links, is_login, err = fetch_and_extract(norm, base_origin, MAX_SINGLE_ITEM_CHARS)
+        if is_login:
+            record_skip("login_wall", norm)
         if err:
+            record_skip(err, norm)
             continue
 
         if page_html and not html_content:
@@ -1842,6 +1863,8 @@ def import_site():
                 collected_texts.append(bounded)
                 total_chars += len(bounded)
                 pages_imported += 1
+                if len(imported_samples) < 5:
+                    imported_samples.append(norm)
             if total_chars >= MAX_TOTAL_EXTRACTED_CHARS:
                 break
             if pages_imported >= MAX_IMPORT_PAGES:
@@ -1857,8 +1880,10 @@ def import_site():
             except Exception:
                 continue
             if normalize_host(parsed_link.netloc) != base_host:
+                record_skip("cross_domain", link)
                 continue
             if is_low_value_path(parsed_link.path):
+                record_skip("low_value_path", link)
                 continue
             child_norm = normalize_crawl_url(link)
             if not child_norm or child_norm in visited:
@@ -1866,7 +1891,16 @@ def import_site():
             queue.append((child_norm, depth + 1))
 
     if not collected_texts:
-        flash("No readable text found. Please check the website and try again.", "error")
+        if skip_reasons:
+            top_reasons = skip_reasons.most_common(3)
+            reason_parts = [f"{reason} ({count})" for reason, count in top_reasons]
+            msg = "No content imported. Most pages were skipped due to: " + ", ".join(reason_parts)
+            sample = skip_samples.get(top_reasons[0][0], [])
+            if sample:
+                msg += f". Example: {sample[0]}"
+            flash(msg if DEBUG_LOGS else "No content imported. The site may block automated access or require a login.", "error")
+        else:
+            flash("No content imported. The site may block automated access or require a login.", "error")
         return redirect(url_for("knowledge"))
 
     user_id = int(current_user.id)
