@@ -2526,6 +2526,15 @@ def widget_config():
 # ==========================
 @app.get("/embed.js")
 def embed_js():
+    try:
+        app.logger.info(
+            "[TheoChat] /embed.js requested host=%s ua=%s api_key_prefix=%s",
+            request.host,
+            (request.headers.get("User-Agent") or "")[:80],
+            (request.args.get("api_key") or "")[:8],
+        )
+    except Exception:
+        pass
     js_path = os.path.join(app.root_path, "static", "js", "embed.js")
     try:
         with open(js_path, "r", encoding="utf-8") as f:
