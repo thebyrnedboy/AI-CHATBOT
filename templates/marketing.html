@@ -237,6 +237,14 @@
 </div>
 
 {% if demo_api_key %}
+<script>
+  window.__THEOCHAT_DEMO__ = {
+    apiKey: "{{ demo_api_key }}",
+    embedBase: "{{ embed_base }}",
+    page: "marketing",
+  };
+  console.debug("[TheoChat demo] init", window.__THEOCHAT_DEMO__);
+</script>
 <div id="demo-widget-helper" class="demo-widget-helper" role="note" aria-label="TheoChat demo helper">
   <button type="button" class="demo-widget-helper__close" aria-label="Dismiss">×</button>
   <strong>This is how TheoChat will look on your site</strong>
@@ -337,6 +345,11 @@
         }
       };
       document.head.appendChild(script);
+      setTimeout(() => {
+        if (!document.querySelector('[id^=\"theochat\"]')) {
+          console.warn("[TheoChat demo] Widget did not mount", window.__THEOCHAT_DEMO__);
+        }
+      }, 3000);
 
       if (debugMode) {
         fetch(`${embedBase}/widget_config?api_key=${encodeURIComponent(demoApiKey)}`)

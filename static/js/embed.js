@@ -16,6 +16,7 @@
   }
 
   const API_KEY = getApiKeyFromScript(scriptEl);
+  const isDemo = !!(window.__THEOCHAT_DEMO__ && window.__THEOCHAT_DEMO__.page === "marketing");
   if (!API_KEY) {
     console.error("[TheoChat] API key missing. Add data-api-key to the script tag or ?api_key=... in the src.");
     return;
@@ -69,8 +70,8 @@
   const customLabel = scriptEl && scriptEl.getAttribute("data-button-label");
   btn.textContent = customLabel || defaultLabel;
   btn.style.position = "fixed";
-  btn.style.bottom = "16px";
-  btn.style.right = "16px";
+  btn.style.bottom = isDemo ? "24px" : "16px";
+  btn.style.right = isDemo ? "24px" : "16px";
   btn.style.zIndex = 9999;
   btn.style.background = "var(--theochat-primary, #2563eb)";
   btn.style.color = "#fff";
@@ -83,8 +84,8 @@
 
   const panel = document.createElement("div");
   panel.style.position = "fixed";
-  panel.style.bottom = "60px";
-  panel.style.right = "16px";
+  panel.style.bottom = isDemo ? "70px" : "60px";
+  panel.style.right = isDemo ? "24px" : "16px";
   panel.style.width = "320px";
   panel.style.height = "470px";
   panel.style.background = "#fff";
