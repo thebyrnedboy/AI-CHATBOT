@@ -200,6 +200,66 @@
     background: #111827;
   }
 
+  .import-progress {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.6rem;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    background: rgba(37,99,235,0.03);
+    color: var(--muted);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .import-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .import-spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid rgba(37,99,235,0.2);
+    border-top-color: #2563eb;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .import-bar {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(37,99,235,0.12);
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .import-bar::after {
+    content: "";
+    position: absolute;
+    left: -40%;
+    top: 0;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, rgba(37,99,235,0.3), #2563eb);
+    animation: indeterminate 1.2s infinite;
+  }
+
+  @keyframes indeterminate {
+    0% { left: -40%; }
+    50% { left: 50%; }
+    100% { left: 120%; }
+  }
+
   #chat-panel {
     display: flex;
     flex-direction: column;
@@ -456,9 +516,13 @@
           </div>
         </form>
         {% endif %}
-        <div id="import-progress" style="display:none;margin-top:0.5rem;padding:0.6rem;border:1px dashed var(--border);border-radius:8px;font-size:0.9rem;color:var(--muted);background:rgba(37,99,235,0.03);">
-          <div id="import-progress-text">Preparing import...</div>
+        <div id="import-progress" class="import-progress">
+          <div class="import-progress-row">
+            <div class="import-spinner" aria-hidden="true"></div>
+            <div id="import-progress-text">Preparing import...</div>
+          </div>
           <div id="import-progress-url" style="font-size:0.85rem;word-break:break-all;margin-top:0.2rem;color:var(--muted);"></div>
+          <div class="import-bar" aria-hidden="true"></div>
         </div>
       </div>
     </div>
@@ -555,6 +619,7 @@ const importProgressBox = document.getElementById("import-progress");
 const importProgressText = document.getElementById("import-progress-text");
 const importProgressUrl = document.getElementById("import-progress-url");
 let importPoller = null;
+let importStartTs = null;
 const dashboardEl = document.querySelector(".tc-card.page");
 const hasImportedWebsiteUrl = dashboardEl?.dataset.hasImportedWebsite === "true";
 
@@ -577,13 +642,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function startPollingStatus() {
     if (importPoller) clearInterval(importPoller);
+    importStartTs = Date.now();
     importPoller = setInterval(async () => {
       try {
         const res = await fetch("{{ url_for('import_status') }}");
         const data = await res.json();
         if (!data.ok) return;
         const pages = typeof data.pages_imported === "number" ? data.pages_imported : 0;
-        importProgressText.textContent = `Importing... Pages imported: ${pages}`;
+        const elapsedSec = importStartTs ? Math.max(0, Math.round((Date.now() - importStartTs) / 1000)) : 0;
+        importProgressText.textContent = `Importing... Pages imported: ${pages}${elapsedSec ? ` · ${elapsedSec}s elapsed` : ""}`;
         if (data.last_url) {
           importProgressUrl.textContent = `Current page: ${data.last_url}`;
         }
@@ -591,7 +658,7 @@ document.addEventListener("DOMContentLoaded", () => {
           clearInterval(importPoller);
           setTimeout(() => {
             window.location = "{{ url_for('knowledge') }}";
-          }, 300);
+          }, 350);
         }
       } catch (err) {
         console.warn("Import status check failed", err);
