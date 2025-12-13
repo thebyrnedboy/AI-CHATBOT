@@ -1810,178 +1810,193 @@ def import_site():
         flash("Invalid URL. Please check the address and try again.", "error")
         return redirect(url_for("knowledge"))
 
-    base_origin = f"{parsed.scheme}://{parsed.netloc}"
-    base_host = normalize_host(parsed.netloc)
-    start_time = time.time()
+    from collections import Counter
 
-    queue: List[Tuple[str, int]] = [(url, 0)]
-    visited: set[str] = set()
-    collected_texts: List[str] = []
-    html_content: Optional[str] = None
-    total_chars = 0
-    pages_imported = 0
-    limit_hit_reason = ""
     skip_reasons: Counter[str] = Counter()
     skip_samples: Dict[str, List[str]] = {}
     imported_samples: List[str] = []
+    pages_imported = 0
 
-    def record_skip(reason: str, sample_url: str):
-        skip_reasons[reason] += 1
-        samples = skip_samples.setdefault(reason, [])
-        if len(samples) < 3:
-            samples.append(sample_url)
-
-    while queue:
-        if time.time() - start_time > MAX_IMPORT_SECONDS:
-            limit_hit_reason = "time"
-            break
-        current_url, depth = queue.pop(0)
-        if depth > MAX_IMPORT_DEPTH:
-            continue
-        norm = normalize_crawl_url(current_url)
-        if not norm or norm in visited:
-            continue
-        visited.add(norm)
-
-        text, page_html, links, is_login, err = fetch_and_extract(norm, base_origin, MAX_SINGLE_ITEM_CHARS)
-        if is_login:
-            record_skip("login_wall", norm)
-        if err:
-            record_skip(err, norm)
-            continue
-
-        if page_html and not html_content:
-            html_content = page_html
-
-        if text:
-            bounded = text[:MAX_SINGLE_ITEM_CHARS]
-            if total_chars + len(bounded) > MAX_TOTAL_EXTRACTED_CHARS:
-                remaining = max(0, MAX_TOTAL_EXTRACTED_CHARS - total_chars)
-                bounded = bounded[:remaining]
-                limit_hit_reason = limit_hit_reason or "char"
-            if bounded:
-                collected_texts.append(bounded)
-                total_chars += len(bounded)
-                pages_imported += 1
-                if len(imported_samples) < 5:
-                    imported_samples.append(norm)
-            if total_chars >= MAX_TOTAL_EXTRACTED_CHARS:
-                break
-            if pages_imported >= MAX_IMPORT_PAGES:
-                limit_hit_reason = limit_hit_reason or "pages"
-                break
-
-        if depth >= MAX_IMPORT_DEPTH or is_login:
-            continue
-
-        for link in links:
-            try:
-                parsed_link = urlparse(link)
-            except Exception:
-                continue
-            if normalize_host(parsed_link.netloc) != base_host:
-                record_skip("cross_domain", link)
-                continue
-            if is_low_value_path(parsed_link.path):
-                record_skip("low_value_path", link)
-                continue
-            child_norm = normalize_crawl_url(link)
-            if not child_norm or child_norm in visited:
-                continue
-            queue.append((child_norm, depth + 1))
-
-    if not collected_texts:
-        if skip_reasons:
-            top_reasons = skip_reasons.most_common(3)
-            reason_parts = [f"{reason} ({count})" for reason, count in top_reasons]
-            msg = "No content imported. Most pages were skipped due to: " + ", ".join(reason_parts)
-            sample = skip_samples.get(top_reasons[0][0], [])
-            if sample:
-                msg += f". Example: {sample[0]}"
-            flash(msg if DEBUG_LOGS else "No content imported. The site may block automated access or require a login.", "error")
-        else:
-            flash("No content imported. The site may block automated access or require a login.", "error")
-        return redirect(url_for("knowledge"))
-
-    user_id = int(current_user.id)
-    biz_id = int(current_user.business_id)
-
-    # Remove existing website import chunks for this business before re-importing
-    conn = get_db_connection()
-    c = conn.cursor()
-    # New-style website rows (with source_type/source_url)
-    c.execute(
-        "DELETE FROM document_chunks WHERE business_id = ? AND source_type = ?",
-        (biz_id, "website"),
-    )
-    # Legacy rows that relied only on filename
-    c.execute(
-        "DELETE FROM document_chunks WHERE business_id = ? AND filename = ?",
-        (biz_id, "website_import"),
-    )
-    conn.commit()
-    conn.close()
-
-    combined_text = "\n\n".join(collected_texts)
-    chunks = chunk_text(combined_text, max_chars=500)
-    existing = get_chunk_count(user_id, biz_id)
-    if existing + len(chunks) > MAX_CHUNKS:
-        flash("Storage limit reached. Remove files to add more.", "error")
-        return redirect(url_for("knowledge"))
-
-    store_document_chunks(
-        user_id,
-        biz_id,
-        "website_import",
-        chunks,
-        "Website import",
-        source_type="website",
-        source_url=url,
-    )
-
-    today = time.strftime("%Y-%m-%d")
-    bump_usage(int(current_user.id), int(current_user.business_id), today, "uploads", 1)
-
-    total_chunks = get_chunk_count(int(current_user.id), int(current_user.business_id))
-
-    # Persist the last imported URL and detected theme for this business after successful import
     try:
+        base_origin = f"{parsed.scheme}://{parsed.netloc}"
+        base_host = normalize_host(parsed.netloc)
+        start_time = time.time()
+
+        queue: List[Tuple[str, int]] = [(url, 0)]
+        visited: set[str] = set()
+        collected_texts: List[str] = []
+        html_content: Optional[str] = None
+        total_chars = 0
+        limit_hit_reason = ""
+
+        def record_skip(reason: str, sample_url: str):
+            skip_reasons[reason] += 1
+            samples = skip_samples.setdefault(reason, [])
+            if len(samples) < 3:
+                samples.append(sample_url)
+
+        while queue:
+            if time.time() - start_time > MAX_IMPORT_SECONDS:
+                limit_hit_reason = "time"
+                break
+            current_url, depth = queue.pop(0)
+            if depth > MAX_IMPORT_DEPTH:
+                continue
+            norm = normalize_crawl_url(current_url)
+            if not norm or norm in visited:
+                continue
+            visited.add(norm)
+
+            text, page_html, links, is_login, err = fetch_and_extract(norm, base_origin, MAX_SINGLE_ITEM_CHARS)
+            if is_login:
+                record_skip("login_wall", norm)
+            if err:
+                record_skip(err, norm)
+                continue
+
+            if page_html and not html_content:
+                html_content = page_html
+
+            if text:
+                bounded = text[:MAX_SINGLE_ITEM_CHARS]
+                if total_chars + len(bounded) > MAX_TOTAL_EXTRACTED_CHARS:
+                    remaining = max(0, MAX_TOTAL_EXTRACTED_CHARS - total_chars)
+                    bounded = bounded[:remaining]
+                    limit_hit_reason = limit_hit_reason or "char"
+                if bounded:
+                    collected_texts.append(bounded)
+                    total_chars += len(bounded)
+                    pages_imported += 1
+                    if len(imported_samples) < 5:
+                        imported_samples.append(norm)
+                if total_chars >= MAX_TOTAL_EXTRACTED_CHARS:
+                    break
+                if pages_imported >= MAX_IMPORT_PAGES:
+                    limit_hit_reason = limit_hit_reason or "pages"
+                    break
+
+            if depth >= MAX_IMPORT_DEPTH or is_login:
+                continue
+
+            for link in links:
+                try:
+                    parsed_link = urlparse(link)
+                except Exception:
+                    continue
+                if normalize_host(parsed_link.netloc) != base_host:
+                    record_skip("cross_domain", link)
+                    continue
+                if is_low_value_path(parsed_link.path):
+                    record_skip("low_value_path", link)
+                    continue
+                child_norm = normalize_crawl_url(link)
+                if not child_norm or child_norm in visited:
+                    continue
+                queue.append((child_norm, depth + 1))
+
+        if not collected_texts:
+            summary = None
+            example = None
+            if skip_reasons:
+                top = skip_reasons.most_common(3)
+                summary = ", ".join(f"{reason} ({count})" for reason, count in top)
+                for reason, _ in top:
+                    samples = skip_samples.get(reason)
+                    if samples:
+                        example = samples[0]
+                        break
+            if DEBUG_LOGS and summary:
+                msg = f"No content imported. Most pages were skipped due to: {summary}"
+                if example:
+                    msg += f". Example: {example}"
+                flash(msg, "error")
+            else:
+                flash("No content imported. The site may block automated access or require a login.", "error")
+            return redirect(url_for("knowledge"))
+
+        user_id = int(current_user.id)
+        biz_id = int(current_user.business_id)
+
+        # Remove existing website import chunks for this business before re-importing
         conn = get_db_connection()
         c = conn.cursor()
-        theme = {}
-        try:
-            theme = extract_theme_from_html(html_content or "", url)
-            print("[TheoChat] Theme detection for import", url, "->", theme.get("primary_color"))
-        except Exception as e:
-            print("Theme extraction error:", e)
-
-        primary = theme.get("primary_color") if isinstance(theme, dict) else None
-        secondary = theme.get("secondary_color") if isinstance(theme, dict) else None
-        font = theme.get("font_family") if isinstance(theme, dict) else None
-        radius = theme.get("border_radius") if isinstance(theme, dict) else None
-
-        if any([primary, secondary, font, radius]):
-            c.execute(
-                """
-                UPDATE businesses
-                SET
-                    last_import_url = ?,
-                    theme_primary_color = COALESCE(?, theme_primary_color),
-                    theme_secondary_color = COALESCE(?, theme_secondary_color),
-                    theme_font_family = COALESCE(?, theme_font_family),
-                    theme_border_radius = COALESCE(?, theme_border_radius)
-                WHERE id = ?
-                """,
-                (url, primary, secondary, font, radius, int(current_user.business_id)),
-            )
-        else:
-            c.execute(
-                "UPDATE businesses SET last_import_url = ? WHERE id = ?",
-                (url, int(current_user.business_id)),
-            )
+        # New-style website rows (with source_type/source_url)
+        c.execute(
+            "DELETE FROM document_chunks WHERE business_id = ? AND source_type = ?",
+            (biz_id, "website"),
+        )
+        # Legacy rows that relied only on filename
+        c.execute(
+            "DELETE FROM document_chunks WHERE business_id = ? AND filename = ?",
+            (biz_id, "website_import"),
+        )
         conn.commit()
-    finally:
         conn.close()
+
+        combined_text = "\n\n".join(collected_texts)
+        chunks = chunk_text(combined_text, max_chars=500)
+        existing = get_chunk_count(user_id, biz_id)
+        if existing + len(chunks) > MAX_CHUNKS:
+            flash("Storage limit reached. Remove files to add more.", "error")
+            return redirect(url_for("knowledge"))
+
+        store_document_chunks(
+            user_id,
+            biz_id,
+            "website_import",
+            chunks,
+            "Website import",
+            source_type="website",
+            source_url=url,
+        )
+
+        today = time.strftime("%Y-%m-%d")
+        bump_usage(int(current_user.id), int(current_user.business_id), today, "uploads", 1)
+
+        total_chunks = get_chunk_count(int(current_user.id), int(current_user.business_id))
+
+        # Persist the last imported URL and detected theme for this business after successful import
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            theme = {}
+            try:
+                theme = extract_theme_from_html(html_content or "", url)
+                print("[TheoChat] Theme detection for import", url, "->", theme.get("primary_color"))
+            except Exception as e:
+                print("Theme extraction error:", e)
+
+            primary = theme.get("primary_color") if isinstance(theme, dict) else None
+            secondary = theme.get("secondary_color") if isinstance(theme, dict) else None
+            font = theme.get("font_family") if isinstance(theme, dict) else None
+            radius = theme.get("border_radius") if isinstance(theme, dict) else None
+
+            if any([primary, secondary, font, radius]):
+                c.execute(
+                    """
+                    UPDATE businesses
+                    SET
+                        last_import_url = ?,
+                        theme_primary_color = COALESCE(?, theme_primary_color),
+                        theme_secondary_color = COALESCE(?, theme_secondary_color),
+                        theme_font_family = COALESCE(?, theme_font_family),
+                        theme_border_radius = COALESCE(?, theme_border_radius)
+                    WHERE id = ?
+                    """,
+                    (url, primary, secondary, font, radius, int(current_user.business_id)),
+                )
+            else:
+                c.execute(
+                    "UPDATE businesses SET last_import_url = ? WHERE id = ?",
+                    (url, int(current_user.business_id)),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        print("[TheoChat] import_site error:", repr(e))
+        flash("Website import failed due to a server error. Please try again or contact support.", "error")
+        return redirect(url_for("knowledge"))
 
     limit_note = ""
     if limit_hit_reason == "time":
