@@ -402,10 +402,10 @@ def init_db():
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
     ensure_column(c, "businesses", "last_import_url", "TEXT")
-        ensure_column(c, "businesses", "theme_primary_color", "TEXT")
-        ensure_column(c, "businesses", "theme_secondary_color", "TEXT")
-        ensure_column(c, "businesses", "theme_font_family", "TEXT")
-        ensure_column(c, "businesses", "theme_border_radius", "TEXT")
+    ensure_column(c, "businesses", "theme_primary_color", "TEXT")
+    ensure_column(c, "businesses", "theme_secondary_color", "TEXT")
+    ensure_column(c, "businesses", "theme_font_family", "TEXT")
+    ensure_column(c, "businesses", "theme_border_radius", "TEXT")
 
     c.execute(
         """
