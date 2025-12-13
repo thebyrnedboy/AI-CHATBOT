@@ -2470,6 +2470,22 @@ def widget_config():
             Response("Error: Invalid API key", status=403, mimetype="text/plain")
         )
 
+    demo_key = get_demo_api_key()
+    is_demo_context = bool(
+        (demo_key and api_key == demo_key)
+        or request.endpoint == "marketing"
+        or (request.args.get("demo") == "1")
+    )
+
+    if is_demo_context:
+        payload = {
+            "theme_primary_color": biz["theme_primary_color"] if "theme_primary_color" in biz.keys() else None,
+            "theme_secondary_color": biz["theme_secondary_color"] if "theme_secondary_color" in biz.keys() else None,
+            "theme_font_family": biz["theme_font_family"] if "theme_font_family" in biz.keys() else None,
+            "theme_border_radius": biz["theme_border_radius"] if "theme_border_radius" in biz.keys() else None,
+        }
+        return add_cors(jsonify(payload))
+
     allowed = parse_allowed_domains(biz["allowed_domains"] or "")
     if allowed:
         host = get_request_host_from_referer()

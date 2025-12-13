@@ -317,8 +317,8 @@
   container.style.flexDirection = "column";
   container.appendChild(header);
   container.appendChild(chatArea);
-  container.appendChild(contactWrapper);
   container.appendChild(inputRow);
+  container.appendChild(contactWrapper);
 
   panel.appendChild(container);
   panel.appendChild(resizer);
