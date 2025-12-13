@@ -1663,8 +1663,8 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
-    demo_api_key = DEMO_API_KEY or get_demo_api_key()
-    embed_base = EMBED_BASE_URL or request.url_root.rstrip("/")
+    demo_api_key = DEMO_API_KEY or THEOCHAT_DEMO_API_KEY or get_demo_api_key() or ""
+    embed_base = ""  # same-origin
     print(
         "[TheoChat] marketing demo_api_key present:",
         bool(demo_api_key),
@@ -1866,8 +1866,8 @@ def marketing():
             return redirect(url_for("dashboard"))
     except Exception:
         pass
-    demo_api_key = DEMO_API_KEY or get_demo_api_key()
-    embed_base = EMBED_BASE_URL or request.url_root.rstrip("/")
+    demo_api_key = DEMO_API_KEY or THEOCHAT_DEMO_API_KEY or get_demo_api_key() or ""
+    embed_base = ""  # same-origin
     print(
         "[TheoChat] marketing demo_api_key present:",
         bool(demo_api_key),
