@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <style>
   .marketing-page {
     max-width: 1080px;
@@ -11,7 +10,6 @@
     flex-direction: column;
     gap: 1.5rem;
   }
-
   .hero {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -19,20 +17,17 @@
     align-items: center;
     padding: 1.25rem;
   }
-
   .hero-actions {
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
     margin-top: 0.5rem;
   }
-
   .hero-note {
     margin: 0.25rem 0 0;
     color: #6b7280;
     font-size: 0.9rem;
   }
-
   .hero-chat-preview {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
@@ -42,45 +37,25 @@
     flex-direction: column;
     gap: 0.5rem;
   }
-
   body.dark .hero-chat-preview {
     border-color: #1f2937;
     background: #0b1224;
   }
-
   .bubble {
     border-radius: 10px;
     padding: 0.6rem 0.8rem;
     max-width: 100%;
     font-size: 0.95rem;
   }
-
-  .bubble-user {
-    background: #dbeafe;
-    align-self: flex-end;
-  }
-
-  .bubble-bot {
-    background: #e5e7eb;
-    align-self: flex-start;
-  }
-
-  body.dark .bubble-user {
-    background: #1d4ed8;
-    color: #e5e7eb;
-  }
-
-  body.dark .bubble-bot {
-    background: #111827;
-    color: #e5e7eb;
-  }
-
+  .bubble-user { background: #dbeafe; align-self: flex-end; }
+  .bubble-bot { background: #e5e7eb; align-self: flex-start; }
+  body.dark .bubble-user { background: #1d4ed8; color: #e5e7eb; }
+  body.dark .bubble-bot { background: #111827; color: #e5e7eb; }
   .why-list, .testimonials {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 0.75rem;
   }
-
   .why-card, .testimonial {
     border-radius: 10px;
     padding: 0.85rem 0.95rem;
@@ -88,12 +63,10 @@
     background: #f9fafb;
     font-size: 0.95rem;
   }
-
   body.dark .why-card, body.dark .testimonial {
     background: #0b1224;
     border-color: #1f2937;
   }
-
   /* Demo helper (marketing only) */
   #demo-widget-helper {
     position: fixed;
@@ -113,19 +86,11 @@
     pointer-events: none;
     transition: opacity 0.35s ease, transform 0.35s ease;
   }
-
-  #demo-widget-helper.is-visible {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-  }
-
+  #demo-widget-helper.is-visible { opacity: 1; transform: none; pointer-events: auto; }
   .demo-widget-helper__close {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
+    top: 8px; right: 8px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.06);
@@ -138,34 +103,12 @@
     justify-content: center;
     transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   }
-
-  .demo-widget-helper__close:hover {
-    background: rgba(255,255,255,0.12);
-    border-color: rgba(255,255,255,0.3);
-    transform: scale(1.05);
-  }
-
-  .demo-widget-helper__close:focus {
-    outline: 2px solid rgba(255,255,255,0.4);
-    outline-offset: 2px;
-  }
-
-  #demo-widget-helper p {
-    margin: 6px 0 0;
-    opacity: 0.9;
-  }
-
+  .demo-widget-helper__close:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); transform: scale(1.05); }
+  .demo-widget-helper__close:focus { outline: 2px solid rgba(255,255,255,0.4); outline-offset: 2px; }
+  #demo-widget-helper p { margin: 6px 0 0; opacity: 0.9; }
   @media (max-width: 480px) {
-    #demo-widget-helper {
-      bottom: 90px;
-      right: 12px;
-      max-width: 220px;
-      font-size: 12px;
-    }
-    .demo-widget-helper__close {
-      width: 32px;
-      height: 32px;
-    }
+    #demo-widget-helper { bottom: 90px; right: 12px; max-width: 220px; font-size: 12px; }
+    .demo-widget-helper__close { width: 32px; height: 32px; }
   }
 </style>
 
@@ -237,14 +180,6 @@
 </div>
 
 {% if demo_api_key %}
-<script>
-  window.__THEOCHAT_DEMO__ = {
-    apiKey: "{{ demo_api_key }}",
-    embedBase: "{{ embed_base }}",
-    page: "marketing",
-  };
-  console.debug("[TheoChat demo] init", window.__THEOCHAT_DEMO__);
-</script>
 <div id="demo-widget-helper" class="demo-widget-helper" role="note" aria-label="TheoChat demo helper">
   <button type="button" class="demo-widget-helper__close" aria-label="Dismiss">×</button>
   <strong>This is how TheoChat will look on your site</strong>
@@ -309,7 +244,7 @@
     const debugMode = params.get('debug_widget') === '1';
     const debugPanel = document.getElementById('demo-widget-debug');
     const demoApiKey = "{{ demo_api_key }}";
-    const embedBase = "{{ embed_base }}";
+    const embedBase = "";
     const maskedKey = demoApiKey ? (demoApiKey.length > 8 ? demoApiKey.slice(0,4) + '…' + demoApiKey.slice(-4) : demoApiKey) : 'none';
 
     function setDebug(text) {
@@ -330,7 +265,11 @@
 
     if (demoApiKey) {
       const script = document.createElement('script');
-      script.src = `${embedBase}/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
+      const embedScriptUrl = `/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
+      window.__THEOCHAT_DEMO__ = { apiKey: demoApiKey, embedBase: embedBase || "(same-origin)", page: "marketing" };
+      console.debug("[TheoChat demo] loading embed.js from:", embedScriptUrl);
+      console.info("[TheoChat demo] embed.js url", embedScriptUrl);
+      script.src = embedScriptUrl;
       script.async = true;
       script.onload = () => {
         if (debugMode) {
@@ -346,16 +285,16 @@
       };
       document.head.appendChild(script);
       setTimeout(() => {
-        if (!document.querySelector('[id^=\"theochat\"]')) {
+        if (!document.querySelector('[id^="theochat"]')) {
           console.warn("[TheoChat demo] Widget did not mount", window.__THEOCHAT_DEMO__);
         }
       }, 3000);
 
       if (debugMode) {
-        fetch(`${embedBase}/widget_config?api_key=${encodeURIComponent(demoApiKey)}`)
+        fetch(`/widget_config?api_key=${encodeURIComponent(demoApiKey)}`)
           .then(async (res) => {
             const text = await res.text();
-            const snippet = text.slice(0, 120).replace(/\\s+/g, ' ');
+            const snippet = text.slice(0, 120).replace(/\s+/g, ' ');
             const el = document.getElementById('dbg-config-status');
             if (el) el.textContent = `widget_config: ${res.status} ${snippet}`;
           })
