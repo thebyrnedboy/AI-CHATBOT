@@ -1,5 +1,6 @@
 ﻿
 import os
+import logging
 import secrets
 import sqlite3
 import time
@@ -8,6 +9,7 @@ from datetime import datetime, timezone, timedelta, UTC
 import re
 from functools import wraps
 from collections import Counter
+import traceback
 import stripe
 import smtplib
 import json
@@ -109,6 +111,9 @@ else:
 # ==========================
 app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("theochat")
 
 login_manager = LoginManager()
 login_manager.login_view = "login"
@@ -1797,27 +1802,34 @@ def upload():
 @app.post("/import_site")
 @subscription_required
 def import_site():
-    url = (request.form.get("website_url") or request.form.get("url") or "").strip()
-    if not url or not url.startswith(("http://", "https://")):
-        flash("Provide a full URL starting with http:// or https://", "error")
-        return redirect(url_for("knowledge"))
     try:
-        parsed = urlparse(url)
-        if not parsed.netloc:
+        url = (request.form.get("website_url") or request.form.get("url") or "").strip()
+        if not url or not url.startswith(("http://", "https://")):
+            flash("Provide a full URL starting with http:// or https://", "error")
+            return redirect(url_for("knowledge"))
+        try:
+            parsed = urlparse(url)
+            if not parsed.netloc:
+                flash("Invalid URL. Please check the address and try again.", "error")
+                return redirect(url_for("knowledge"))
+        except Exception:
             flash("Invalid URL. Please check the address and try again.", "error")
             return redirect(url_for("knowledge"))
-    except Exception:
-        flash("Invalid URL. Please check the address and try again.", "error")
-        return redirect(url_for("knowledge"))
 
-    from collections import Counter
+        from collections import Counter
 
-    skip_reasons: Counter[str] = Counter()
-    skip_samples: Dict[str, List[str]] = {}
-    imported_samples: List[str] = []
-    pages_imported = 0
+        skip_reasons: Counter[str] = Counter()
+        skip_samples: Dict[str, List[str]] = {}
+        imported_samples: List[str] = []
+        pages_imported = 0
 
-    try:
+        logger.info(
+            "[TheoChat] import_site starting url=%s user_id=%s biz_id=%s",
+            url,
+            getattr(current_user, "id", None),
+            getattr(current_user, "business_id", None),
+        )
+
         base_origin = f"{parsed.scheme}://{parsed.netloc}"
         base_host = normalize_host(parsed.netloc)
         start_time = time.time()
@@ -1994,8 +2006,13 @@ def import_site():
         finally:
             conn.close()
     except Exception as e:
-        print("[TheoChat] import_site error:", repr(e))
-        flash("Website import failed due to a server error. Please try again or contact support.", "error")
+        tb = traceback.format_exc()
+        logger.error("[TheoChat] import_site exception: %s", repr(e))
+        logger.error(tb)
+        if DEBUG_LOGS:
+            flash(f"Website import failed: {type(e).__name__}: {str(e)}", "error")
+        else:
+            flash("Website import failed due to a server error. Please try again.", "error")
         return redirect(url_for("knowledge"))
 
     limit_note = ""
@@ -2787,6 +2804,19 @@ def business_settings():
 
     flash("Business settings saved.", "success")
     return redirect(url_for("index"))
+
+
+# ==========================
+# Global error handler
+# ==========================
+@app.errorhandler(Exception)
+def handle_any_exception(e):
+    tb = traceback.format_exc()
+    logger.error("[TheoChat] Unhandled exception: %s", repr(e))
+    logger.error(tb)
+    if DEBUG_LOGS:
+        return f"Internal error: {type(e).__name__}: {str(e)}", 500
+    return "Internal Server Error", 500
 
 
 # ==========================
