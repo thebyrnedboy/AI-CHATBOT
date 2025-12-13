@@ -452,10 +452,14 @@
           <input type="hidden" name="website_url" value="{{ imported_website_url }}" />
           <button type="submit" class="secondary" style="align-self:flex-start;padding:0.45rem 0.9rem;border-radius:6px;">Re-import website</button>
           <div style="font-size:0.85rem;color:#6b7280;">
-            If you’ve updated your website, click this to wipe the old website content and re-learn it.
+            If you've updated your website, click this to wipe the old website content and re-learn it.
           </div>
         </form>
         {% endif %}
+        <div id="import-progress" style="display:none;margin-top:0.5rem;padding:0.6rem;border:1px dashed var(--border);border-radius:8px;font-size:0.9rem;color:var(--muted);background:rgba(37,99,235,0.03);">
+          <div id="import-progress-text">Preparing import...</div>
+          <div id="import-progress-url" style="font-size:0.85rem;word-break:break-all;margin-top:0.2rem;color:var(--muted);"></div>
+        </div>
       </div>
     </div>
 
@@ -546,23 +550,87 @@ const fileInput = document.getElementById("file-input");
 const labelInput = document.getElementById("upload-label");
 const websiteUrlInput = document.getElementById("website-url-input");
 const websiteImportButton = document.getElementById("website-import-button");
+const importSiteUrl = "{{ url_for('import_site') }}";
+const importProgressBox = document.getElementById("import-progress");
+const importProgressText = document.getElementById("import-progress-text");
+const importProgressUrl = document.getElementById("import-progress-url");
+let importPoller = null;
 const dashboardEl = document.querySelector(".tc-card.page");
 const hasImportedWebsiteUrl = dashboardEl?.dataset.hasImportedWebsite === "true";
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (!hasImportedWebsiteUrl) return;
-  if (!websiteUrlInput || !websiteImportButton) return;
+  if (websiteImportButton && hasImportedWebsiteUrl && websiteUrlInput && websiteUrlInput.disabled) {
+    websiteImportButton.addEventListener("click", (e) => {
+      if (!websiteUrlInput.disabled) return;
+      e.preventDefault();
+      websiteUrlInput.disabled = false;
+      websiteUrlInput.style.background = "#fff";
+      websiteUrlInput.style.color = "#111827";
+      websiteUrlInput.style.cursor = "text";
+      websiteImportButton.textContent = "Import website";
+      websiteImportButton.type = "submit";
+      websiteUrlInput.focus();
+    });
+  }
 
-  websiteImportButton.addEventListener("click", (e) => {
-    if (!websiteUrlInput.disabled) return;
-    e.preventDefault();
-    websiteUrlInput.disabled = false;
-    websiteUrlInput.style.background = "#fff";
-    websiteUrlInput.style.color = "#111827";
-    websiteUrlInput.style.cursor = "text";
-    websiteImportButton.textContent = "Import website";
-    websiteImportButton.type = "submit";
-    websiteUrlInput.focus();
+  const importForms = Array.from(document.querySelectorAll(`form[action="${importSiteUrl}"]`));
+
+  function startPollingStatus() {
+    if (importPoller) clearInterval(importPoller);
+    importPoller = setInterval(async () => {
+      try {
+        const res = await fetch("{{ url_for('import_status') }}");
+        const data = await res.json();
+        if (!data.ok) return;
+        const pages = typeof data.pages_imported === "number" ? data.pages_imported : 0;
+        importProgressText.textContent = `Importing... Pages imported: ${pages}`;
+        if (data.last_url) {
+          importProgressUrl.textContent = `Current page: ${data.last_url}`;
+        }
+        if (data.status === "done" || data.status === "error") {
+          clearInterval(importPoller);
+          setTimeout(() => {
+            window.location = "{{ url_for('knowledge') }}";
+          }, 300);
+        }
+      } catch (err) {
+        console.warn("Import status check failed", err);
+      }
+    }, 1000);
+  }
+
+  function disableImportForms(disabled) {
+    importForms.forEach((form) => {
+      const btn = form.querySelector("button[type='submit'], button");
+      if (btn) btn.disabled = disabled;
+    });
+    if (websiteUrlInput && disabled) {
+      websiteUrlInput.style.cursor = "not-allowed";
+    }
+  }
+
+  function submitImportForm(form) {
+    const fd = new FormData(form);
+    importProgressBox.style.display = "block";
+    importProgressText.textContent = "Starting import...";
+    importProgressUrl.textContent = "";
+    disableImportForms(true);
+    try {
+      fetch(importSiteUrl, {
+        method: "POST",
+        body: fd
+      }).catch(() => {});
+    } catch (e) {
+      console.warn("Import submit failed", e);
+    }
+    startPollingStatus();
+  }
+
+  importForms.forEach((form) => {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submitImportForm(form);
+    });
   });
 });
 

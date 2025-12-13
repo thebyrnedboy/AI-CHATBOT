@@ -96,6 +96,16 @@
 </style>
 
 <div class="tc-card marketing-page space-y-6">
+  {% if demo_api_key %}
+  <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5">
+    <h2 class="tc-h2" style="margin:0 0 0.35rem;">This is how TheoChat will look on your site</h2>
+    <p class="tc-subtext" style="margin:0 0 0.6rem;">Try it now — ask Theo about TheoChat.</p>
+    <div style="border:1px dashed var(--border);border-radius:12px;padding:0.75rem;background:var(--card);">
+      <script src="{{ embed_base }}/embed.js?api_key={{ demo_api_key }}" async></script>
+    </div>
+  </section>
+  {% endif %}
+
   <section class="hero">
     <div class="hero-layout">
       <div class="hero-content-block">

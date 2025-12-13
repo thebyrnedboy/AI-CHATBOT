@@ -61,6 +61,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com").lower()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
+THEOCHAT_DEMO_API_KEY = (os.getenv("THEOCHAT_DEMO_API_KEY") or "").strip()
 DB_PATH = os.getenv("DATABASE_PATH", "app.db")
 # Simple startup log to confirm which database file is in use (useful for Railway volumes)
 print(f"[TheoChat] Using database at: {DB_PATH}")
@@ -228,6 +229,82 @@ def ensure_column(cursor, table: str, column: str, definition: str):
 def generate_api_key() -> str:
     return "biz_" + secrets.token_urlsafe(24)
 
+
+def get_demo_api_key() -> Optional[str]:
+    if THEOCHAT_DEMO_API_KEY:
+        return THEOCHAT_DEMO_API_KEY
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT api_key FROM businesses WHERE name = ? LIMIT 1", ("TheoChat Demo",))
+    row = c.fetchone()
+    conn.close()
+    if row and row["api_key"]:
+        return row["api_key"]
+    return None
+
+
+def create_import_job(user_id: int, business_id: int) -> int:
+    conn = get_db_connection()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    c.execute(
+        """
+        INSERT INTO website_import_jobs (user_id, business_id, status, started_at, updated_at, pages_imported, total_chars)
+        VALUES (?, ?, 'running', ?, ?, 0, 0)
+        """,
+        (user_id, business_id, now, now),
+    )
+    job_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return int(job_id)
+
+
+def update_import_job(job_id: int, pages_imported: int | None = None, total_chars: int | None = None, last_url: str | None = None, message: str | None = None):
+    conn = get_db_connection()
+    c = conn.cursor()
+    fields = ["updated_at = ?"]
+    params: list = [datetime.utcnow().isoformat()]
+    if pages_imported is not None:
+        fields.append("pages_imported = ?")
+        params.append(pages_imported)
+    if total_chars is not None:
+        fields.append("total_chars = ?")
+        params.append(total_chars)
+    if last_url is not None:
+        fields.append("last_url = ?")
+        params.append(last_url)
+    if message is not None:
+        fields.append("message = ?")
+        params.append(message)
+    params.append(job_id)
+    try:
+        c.execute(f"UPDATE website_import_jobs SET {', '.join(fields)} WHERE id = ?", params)
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
+def finish_import_job(job_id: int, status: str, message: str | None = None):
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute(
+            """
+            UPDATE website_import_jobs
+            SET status = ?, updated_at = ?, message = ?
+            WHERE id = ?
+            """,
+            (status, datetime.utcnow().isoformat(), message, job_id),
+        )
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
@@ -325,10 +402,27 @@ def init_db():
     ensure_column(c, "businesses", "contact_enabled", "INTEGER DEFAULT 0")
     ensure_column(c, "businesses", "contact_email", "TEXT")
     ensure_column(c, "businesses", "last_import_url", "TEXT")
-    ensure_column(c, "businesses", "theme_primary_color", "TEXT")
-    ensure_column(c, "businesses", "theme_secondary_color", "TEXT")
-    ensure_column(c, "businesses", "theme_font_family", "TEXT")
-    ensure_column(c, "businesses", "theme_border_radius", "TEXT")
+        ensure_column(c, "businesses", "theme_primary_color", "TEXT")
+        ensure_column(c, "businesses", "theme_secondary_color", "TEXT")
+        ensure_column(c, "businesses", "theme_font_family", "TEXT")
+        ensure_column(c, "businesses", "theme_border_radius", "TEXT")
+
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS website_import_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            business_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            started_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            pages_imported INTEGER DEFAULT 0,
+            total_chars INTEGER DEFAULT 0,
+            message TEXT,
+            last_url TEXT
+        )
+        """
+    )
 
     c.execute(
         """
@@ -425,6 +519,26 @@ def init_db():
     c.execute(
         "UPDATE document_chunks SET business_id = (SELECT business_id FROM users WHERE id = document_chunks.user_id) WHERE business_id IS NULL"
     )
+
+    demo_name = "TheoChat Demo"
+    demo_allowed_set = {"theochat.co.uk", "www.theochat.co.uk", "localhost", "127.0.0.1"}
+    c.execute("SELECT id, api_key, allowed_domains FROM businesses WHERE name = ?", (demo_name,))
+    demo_row = c.fetchone()
+    if demo_row:
+        existing_allowed = demo_row["allowed_domains"] or ""
+        existing_set = {d.strip() for d in existing_allowed.split(",") if d.strip()}
+        merged = sorted(demo_allowed_set.union(existing_set))
+        merged_str = ",".join(merged)
+        c.execute(
+            "UPDATE businesses SET allowed_domains = ? WHERE id = ?",
+            (merged_str, demo_row["id"]),
+        )
+    else:
+        demo_api = generate_api_key()
+        c.execute(
+            "INSERT INTO businesses (name, api_key, allowed_domains) VALUES (?, ?, ?)",
+            (demo_name, demo_api, ",".join(sorted(demo_allowed_set))),
+        )
 
     conn.commit()
     conn.close()
@@ -1545,7 +1659,9 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
-    return render_template("marketing.html")
+    demo_api_key = get_demo_api_key()
+    embed_base = request.host_url.rstrip("/")
+    return render_template("marketing.html", demo_api_key=demo_api_key, embed_base=embed_base)
 
 
 @app.get("/dashboard")
@@ -1740,7 +1856,9 @@ def marketing():
             return redirect(url_for("dashboard"))
     except Exception:
         pass
-    return render_template("marketing.html")
+    demo_api_key = get_demo_api_key()
+    embed_base = request.host_url.rstrip("/")
+    return render_template("marketing.html", demo_api_key=demo_api_key, embed_base=embed_base)
 
 
 # ==========================
@@ -1813,6 +1931,7 @@ def upload():
 @app.post("/import_site")
 @subscription_required
 def import_site():
+    job_id = None
     try:
         url = (request.form.get("website_url") or request.form.get("url") or "").strip()
         if not url or not url.startswith(("http://", "https://")):
@@ -1833,6 +1952,8 @@ def import_site():
         skip_samples: Dict[str, List[str]] = {}
         imported_samples: List[str] = []
         pages_imported = 0
+        job_id = create_import_job(int(current_user.id), int(current_user.business_id))
+        last_job_update = time.time()
 
         logger.info(
             "[TheoChat] import_site starting url=%s user_id=%s biz_id=%s",
@@ -1896,6 +2017,10 @@ def import_site():
                     pages_imported += 1
                     if len(imported_samples) < 5:
                         imported_samples.append(norm)
+                now = time.time()
+                if (pages_imported % 3 == 0) or (now - last_job_update > 1.0):
+                    update_import_job(job_id, pages_imported=pages_imported, total_chars=total_chars, last_url=norm)
+                    last_job_update = now
                 if total_chars >= MAX_TOTAL_EXTRACTED_CHARS:
                     break
                 if pages_imported >= MAX_IMPORT_PAGES:
@@ -1937,8 +2062,10 @@ def import_site():
                 if example:
                     msg += f". Example: {example}"
                 flash(msg, "error")
+                finish_import_job(job_id, "error", msg)
             else:
                 flash("No content imported. The site may block automated access or require a login.", "error")
+                finish_import_job(job_id, "error", "No content imported. The site may block automated access or require a login.")
             return redirect(url_for("knowledge"))
 
         user_id = int(current_user.id)
@@ -2028,6 +2155,11 @@ def import_site():
             flash(f"Website import failed: {type(e).__name__}: {str(e)}", "error")
         else:
             flash("Website import failed due to a server error. Please try again.", "error")
+        try:
+            if job_id:
+                finish_import_job(job_id, "error", f"{type(e).__name__}: {str(e)}")
+        except Exception:
+            pass
         return redirect(url_for("knowledge"))
 
     limit_note = ""
@@ -2040,7 +2172,13 @@ def import_site():
     elif limit_hit_reason == "budget":
         limit_note = f" Imported the first {pages_imported} pages before the server time budget."
 
-    flash(f"Website content import completed.{limit_note} It may take a moment for all content to be available.", "success")
+    success_msg = f"Website content import completed.{limit_note} It may take a moment for all content to be available."
+    flash(success_msg, "success")
+    try:
+        if job_id:
+            finish_import_job(job_id, "done", success_msg)
+    except Exception:
+        pass
     return redirect(url_for("knowledge"))
 # ==========================
 # Chat
@@ -2834,6 +2972,41 @@ def handle_any_exception(e):
     if DEBUG_LOGS:
         return f"Internal error: {type(e).__name__}: {str(e)}", 500
     return "Internal Server Error", 500
+
+
+@app.get("/import_status")
+@subscription_required
+def import_status():
+    user_id = int(current_user.id)
+    biz_id = int(current_user.business_id)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT id, status, started_at, updated_at, pages_imported, total_chars, message, last_url
+        FROM website_import_jobs
+        WHERE user_id = ? AND business_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (user_id, biz_id),
+    )
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"ok": False, "message": "No import job found"}), 200
+    return jsonify(
+        {
+            "ok": True,
+            "status": row["status"],
+            "started_at": row["started_at"],
+            "updated_at": row["updated_at"],
+            "pages_imported": row["pages_imported"],
+            "total_chars": row["total_chars"],
+            "message": row["message"],
+            "last_url": row["last_url"],
+        }
+    )
 
 
 # ==========================
