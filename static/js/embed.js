@@ -151,6 +151,7 @@
       panel.style.opacity = "1";
       panel.style.transform = "translateY(0)";
     });
+    hideDemoHelper(true);
     try {
       window.dispatchEvent(new CustomEvent("theochat:open"));
     } catch (e) {}
@@ -338,6 +339,60 @@
   panel.appendChild(container);
   panel.appendChild(resizer);
 
+  let demoHelper = null;
+  let helperDismissed = false;
+  const helperKey = "theochat_demo_helper_dismissed_v1";
+
+  function hideDemoHelper(setDismissed = false) {
+    if (!demoHelper) return;
+    demoHelper.classList.remove("is-visible");
+    if (setDismissed) {
+      helperDismissed = true;
+      try { localStorage.setItem(helperKey, "1"); } catch (e) {}
+    }
+  }
+
+  function adjustHelperPosition() {
+    if (!demoHelper || !btn) return;
+    demoHelper.style.bottom = "110px";
+    const hRect = demoHelper.getBoundingClientRect();
+    const bRect = btn.getBoundingClientRect();
+    const overlap = !(hRect.right < bRect.left || hRect.left > bRect.right || hRect.bottom < bRect.top || hRect.top > bRect.bottom);
+    if (overlap) {
+      const extra = bRect.height + 20;
+      demoHelper.style.bottom = `${110 + extra}px`;
+    }
+  }
+
+  function createDemoHelper() {
+    try { helperDismissed = localStorage.getItem(helperKey) === "1"; } catch (e) { helperDismissed = false; }
+    if (helperDismissed) return;
+    demoHelper = document.createElement("div");
+    demoHelper.className = "demo-widget-helper";
+    demoHelper.id = "tc-demo-helper";
+    demoHelper.innerHTML = `
+      <button class="demo-widget-helper__close" type="button" aria-label="Dismiss">×</button>
+      <strong>This is what the TheoChat chatbot would look like on your page.</strong>
+      <p>Try asking a question, or click Contact us.</p>
+    `;
+    document.body.appendChild(demoHelper);
+    const closeBtn = demoHelper.querySelector(".demo-widget-helper__close");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => hideDemoHelper(true));
+    }
+    setTimeout(() => {
+      if (helperDismissed) return;
+      demoHelper.classList.add("is-visible");
+      adjustHelperPosition();
+    }, 250);
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      if (!demoHelper) return;
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(adjustHelperPosition, 120);
+    });
+  }
+
   btn.addEventListener("click", () => {
     const isHidden = panel.style.display === "none";
     if (isHidden) {
@@ -346,6 +401,10 @@
       closePanel();
     }
   });
+
+  if (isDemo) {
+    createDemoHelper();
+  }
 
   async function sendMessage() {
     const text = input.value.trim();
