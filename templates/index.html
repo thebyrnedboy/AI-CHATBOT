@@ -486,41 +486,43 @@
         <p style="margin:0 0 0.75rem;color:var(--muted);">
           Paste your main website URL and TheoChat will crawl your site and import content to use in responses.
         </p>
-        <form action="{{ url_for('import_site') }}" method="post" style="display:flex;flex-direction:column;gap:0.65rem;max-width:520px;">
-          <input
-            id="website-url-input"
-            type="url"
-            name="website_url"
-            required
-            placeholder="https://yourwebsite.com"
-            value="{{ imported_website_url or '' }}"
-            {% if imported_website_url %}disabled{% endif %}
-            style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;"
-            class="{% if imported_website_url %}bg-gray-50 text-gray-500 cursor-not-allowed{% endif %}"
-          />
-          <button
-            id="website-import-button"
-            type="{% if imported_website_url %}button{% else %}submit{% endif %}"
-            class="primary tc-btn-primary"
-            style="align-self:flex-start;padding:0.5rem 1rem;border-radius:6px;"
-          >
-            {% if imported_website_url %}Change import{% else %}Import website{% endif %}
-          </button>
-        </form>
-        {% if imported_website_url %}
-        <form action="{{ url_for('import_site') }}" method="post" style="margin-top:0.35rem;display:flex;flex-direction:column;gap:0.35rem;max-width:520px;">
-          <input type="hidden" name="website_url" value="{{ imported_website_url }}" />
-          <button type="submit" class="secondary" style="align-self:flex-start;padding:0.45rem 0.9rem;border-radius:6px;">Re-import website</button>
-          <div style="font-size:0.85rem;color:#6b7280;">
-            If you've updated your website, click this to wipe the old website content and re-learn it.
+        {% if not imported_website_url %}
+          <form action="{{ url_for('import_site') }}" method="post" style="display:flex;flex-direction:column;gap:0.65rem;max-width:520px;">
+            <input
+              id="website-url-input"
+              type="url"
+              name="website_url"
+              required
+              placeholder="https://yourwebsite.com"
+              value=""
+              style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;"
+            />
+            <button
+              id="website-import-button"
+              type="submit"
+              class="primary tc-btn-primary"
+              style="align-self:flex-start;padding:0.5rem 1rem;border-radius:6px;"
+            >
+              Import website
+            </button>
+          </form>
+        {% else %}
+          <div style="display:flex;flex-direction:column;gap:0.35rem;max-width:520px;margin-top:0.35rem;">
+            <label for="website-url-input" style="font-size:0.9rem;color:#6b7280;">Imported URL</label>
+            <input
+              id="website-url-input"
+              type="url"
+              value="{{ imported_website_url }}"
+              disabled
+              style="flex:1;padding:0.5rem;border-radius:6px;border:1px solid var(--border);font-size:0.95rem;background:#f8fafc;color:#6b7280;"
+            />
+            <form action="{{ url_for('import_site_reset') }}" method="post" style="display:flex;flex-direction:column;gap:0.35rem;">
+              <button type="submit" class="secondary" style="align-self:flex-start;padding:0.45rem 0.9rem;border-radius:6px;">Reset website import</button>
+              <div style="font-size:0.85rem;color:#6b7280;">
+                Removes imported website content and clears the saved URL so you can start fresh.
+              </div>
+            </form>
           </div>
-        </form>
-        <form action="{{ url_for('import_site_reset') }}" method="post" style="margin-top:0.35rem;display:flex;flex-direction:column;gap:0.35rem;max-width:520px;">
-          <button type="submit" class="secondary" style="align-self:flex-start;padding:0.45rem 0.9rem;border-radius:6px;">Reset website import</button>
-          <div style="font-size:0.85rem;color:#6b7280;">
-            Removes imported website content and clears the saved URL so you can start fresh.
-          </div>
-        </form>
         {% endif %}
         <div id="import-progress" class="import-progress">
           <div class="import-progress-row">
