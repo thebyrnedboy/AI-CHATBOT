@@ -515,6 +515,12 @@
             If you've updated your website, click this to wipe the old website content and re-learn it.
           </div>
         </form>
+        <form action="{{ url_for('import_site_reset') }}" method="post" style="margin-top:0.35rem;display:flex;flex-direction:column;gap:0.35rem;max-width:520px;">
+          <button type="submit" class="secondary" style="align-self:flex-start;padding:0.45rem 0.9rem;border-radius:6px;">Reset website import</button>
+          <div style="font-size:0.85rem;color:#6b7280;">
+            Removes imported website content and clears the saved URL so you can start fresh.
+          </div>
+        </form>
         {% endif %}
         <div id="import-progress" class="import-progress">
           <div class="import-progress-row">

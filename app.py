@@ -1969,9 +1969,9 @@ def upload():
     c.execute(
         "DELETE FROM document_chunks WHERE user_id = ? AND business_id = ? AND filename = ?",
         (int(current_user.id), int(current_user.business_id), safe_name),
-    )
-    conn.commit()
-    conn.close()
+        )
+        conn.commit()
+        conn.close()
 
     store_document_chunks(int(current_user.id), int(current_user.business_id), safe_name, chunks, label or safe_name)
 
@@ -1986,6 +1986,25 @@ def upload():
     total_chunks = get_chunk_count(int(current_user.id), int(current_user.business_id))
 
     return jsonify({"ok": True, "filename": safe_name, "num_chunks": len(chunks), "preview": text[:400], "total_chunks": total_chunks})
+
+
+@app.post("/import_site/reset")
+@subscription_required
+def import_site_reset():
+    biz_id = int(current_user.business_id)
+    user_id = int(current_user.id)
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        c.execute("DELETE FROM document_chunks WHERE business_id = ? AND source_type = ?", (biz_id, "website"))
+        c.execute("DELETE FROM document_chunks WHERE business_id = ? AND filename = ?", (biz_id, "website_import"))
+        c.execute("DELETE FROM messages WHERE business_id = ?", (biz_id,))
+        c.execute("UPDATE businesses SET last_import_url = NULL WHERE id = ?", (biz_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    flash("Website import reset. You can import again with a fresh URL.", "success")
+    return redirect(url_for("index"))
 
 
 @app.post("/import_site")
