@@ -1969,9 +1969,9 @@ def upload():
     c.execute(
         "DELETE FROM document_chunks WHERE user_id = ? AND business_id = ? AND filename = ?",
         (int(current_user.id), int(current_user.business_id), safe_name),
-        )
-        conn.commit()
-        conn.close()
+    )
+    conn.commit()
+    conn.close()
 
     store_document_chunks(int(current_user.id), int(current_user.business_id), safe_name, chunks, label or safe_name)
 
