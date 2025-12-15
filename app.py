@@ -263,6 +263,11 @@ def get_demo_api_key() -> Optional[str]:
         return None
 
 
+def is_demo_request(api_key: str) -> bool:
+    demo_key = get_demo_api_key()
+    return bool((demo_key and api_key == demo_key) or (request.args.get("demo") == "1"))
+
+
 
 def create_import_job(user_id: int, business_id: int) -> int:
     conn = get_db_connection()
@@ -554,11 +559,15 @@ def init_db():
             "UPDATE businesses SET allowed_domains = ? WHERE id = ?",
             (merged_str, demo_row["id"]),
         )
+        c.execute(
+            "UPDATE businesses SET owner_user_id = ? WHERE id = ?",
+            (admin_user_id, demo_row["id"]),
+        )
     else:
         demo_api = generate_api_key()
         c.execute(
-            "INSERT INTO businesses (name, api_key, allowed_domains) VALUES (?, ?, ?)",
-            (demo_name, demo_api, ",".join(sorted(demo_allowed_set))),
+            "INSERT INTO businesses (name, api_key, allowed_domains, owner_user_id) VALUES (?, ?, ?, ?)",
+            (demo_name, demo_api, ",".join(sorted(demo_allowed_set)), admin_user_id),
         )
 
     conn.commit()
@@ -2268,6 +2277,7 @@ def chat_stream():
         return add_cors(Response(status=204))
 
     api_key = (request.args.get("api_key") or request.headers.get("X-API-Key") or "").strip()
+    is_demo_context = False
     actor_user = None
     business_id = None
     contact_available = False
@@ -2278,61 +2288,87 @@ def chat_stream():
             return add_cors(
                 Response("Error: Invalid API key", status=403, mimetype="text/plain")
             )
-        if not biz["owner_user_id"]:
-            return add_cors(
-                Response("Error: Business not configured", status=400, mimetype="text/plain")
-            )
-        actor_user = load_user(biz["owner_user_id"])
-        if not actor_user:
-            return add_cors(
-                Response("Error: Business owner missing", status=400, mimetype="text/plain")
-            )
         business_id = int(biz["id"])
-
-        # Enforce allowed domains based on Referer
-        allowed = parse_allowed_domains(biz["allowed_domains"] or "")
-        if allowed:
-            host = get_request_host_from_referer()
-            if not host:
-                origin = request.headers.get("Origin", "")
-                if origin:
-                    try:
-                        host = normalize_host(urlparse(origin).netloc)
-                    except Exception:
-                        host = ""
-                if not host and DEBUG_LOGS:
-                    print("Domain allowlist: missing or invalid Referer/Origin; cannot determine host.")
-                return add_cors(
-                    Response(
-                        "Blocked: could not determine requesting site. Ensure your site sends a Referer or Origin header and that the domain is on your allowlist.",
-                        status=403,
-                        mimetype="text/plain",
-                    )
-                )
-            if not any(host == d or host.endswith("." + d) for d in allowed):
-                if DEBUG_LOGS:
-                    print(f"Domain allowlist: host '{host}' not in allowed domains {allowed}")
-                return add_cors(
-                    Response(
-                        "Error: Domain not allowed for this API key.",
-                        status=403,
-                        mimetype="text/plain",
-                    )
-                )
-
-        # Enforce subscription (active or trialing) for widget usage
-        if not getattr(actor_user, "has_active_subscription", False):
-            return add_cors(
-                Response(
-                    "Error: Subscription inactive. Widget chat is disabled for this business.",
-                    status=402,
-                    mimetype="text/plain",
-                )
-            )
+        is_demo_context = is_demo_request(api_key)
 
         contact_enabled = bool(biz["contact_enabled"]) if "contact_enabled" in biz.keys() else False
         contact_email = biz["contact_email"] if "contact_email" in biz.keys() else None
         contact_available = bool(contact_enabled and contact_email)
+
+        if is_demo_context:
+            if biz["owner_user_id"]:
+                actor_user = load_user(biz["owner_user_id"])
+            if not actor_user:
+                row = None
+                conn = None
+                try:
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    c.execute(
+                        "SELECT id, email, business_id, plan, stripe_subscription_status, stripe_customer_id, stripe_subscription_id FROM users WHERE email = ? LIMIT 1",
+                        (ADMIN_EMAIL,),
+                    )
+                    row = c.fetchone()
+                finally:
+                    if conn:
+                        conn.close()
+                if row:
+                    actor_user = User(
+                        row["id"],
+                        row["email"],
+                        row["business_id"],
+                        row["stripe_subscription_status"],
+                        row["plan"],
+                        row["stripe_customer_id"],
+                        row["stripe_subscription_id"],
+                    )
+            if not actor_user:
+                return add_cors(
+                    Response("Error: Business owner missing", status=400, mimetype="text/plain")
+                )
+        else:
+            # Enforce allowed domains based on Referer
+            allowed = parse_allowed_domains(biz["allowed_domains"] or "")
+            if allowed:
+                host = get_request_host_from_referer()
+                if not host:
+                    origin = request.headers.get("Origin", "")
+                    if origin:
+                        try:
+                            host = normalize_host(urlparse(origin).netloc)
+                        except Exception:
+                            host = ""
+                    if not host and DEBUG_LOGS:
+                        print("Domain allowlist: missing or invalid Referer/Origin; cannot determine host.")
+                    return add_cors(
+                        Response(
+                            "Blocked: could not determine requesting site. Ensure your site sends a Referer or Origin header and that the domain is on your allowlist.",
+                            status=403,
+                            mimetype="text/plain",
+                        )
+                    )
+                if not any(host == d or host.endswith("." + d) for d in allowed):
+                    if DEBUG_LOGS:
+                        print(f"Domain allowlist: host '{host}' not in allowed domains {allowed}")
+                    return add_cors(
+                        Response(
+                            "Error: Domain not allowed for this API key.",
+                            status=403,
+                            mimetype="text/plain",
+                        )
+                    )
+
+            # Enforce subscription (active or trialing) for widget usage
+            owner = load_user(biz["owner_user_id"]) if biz["owner_user_id"] else None
+            if not owner or not getattr(owner, "has_active_subscription", False):
+                return add_cors(
+                    Response(
+                        "Error: Subscription inactive. Widget chat is disabled for this business.",
+                        status=402,
+                        mimetype="text/plain",
+                    )
+                )
+            actor_user = owner
     else:
         if not current_user.is_authenticated:
             return add_cors(
@@ -2411,35 +2447,38 @@ def widget_contact():
             Response("Error: Invalid API key", status=403, mimetype="text/plain")
         )
 
-    # Enforce allowed domains based on Referer
-    allowed = parse_allowed_domains(biz["allowed_domains"] or "")
-    if allowed:
-        host = get_request_host_from_referer()
-        if not host:
-            origin = request.headers.get("Origin", "")
-            if origin:
-                try:
-                    host = normalize_host(urlparse(origin).netloc)
-                except Exception:
-                    host = ""
-        if not host:
-            if DEBUG_LOGS:
-                print("widget_contact: missing Referer/Origin, cannot enforce allowlist")
-            return add_cors(
-                Response(
-                    "Error: Could not determine requesting site (missing or invalid Referer/Origin).",
-                    status=403,
-                    mimetype="text/plain",
+    is_demo_context = is_demo_request(api_key)
+
+    # Enforce allowed domains based on Referer (skip in demo)
+    if not is_demo_context:
+        allowed = parse_allowed_domains(biz["allowed_domains"] or "")
+        if allowed:
+            host = get_request_host_from_referer()
+            if not host:
+                origin = request.headers.get("Origin", "")
+                if origin:
+                    try:
+                        host = normalize_host(urlparse(origin).netloc)
+                    except Exception:
+                        host = ""
+            if not host:
+                if DEBUG_LOGS:
+                    print("widget_contact: missing Referer/Origin, cannot enforce allowlist")
+                return add_cors(
+                    Response(
+                        "Error: Could not determine requesting site (missing or invalid Referer/Origin).",
+                        status=403,
+                        mimetype="text/plain",
+                    )
                 )
-            )
-        if not any(host == d or host.endswith("." + d) for d in allowed):
-            return add_cors(
-                Response(
-                    "Error: Domain not allowed for this API key.",
-                    status=403,
-                    mimetype="text/plain",
+            if not any(host == d or host.endswith("." + d) for d in allowed):
+                return add_cors(
+                    Response(
+                        "Error: Domain not allowed for this API key.",
+                        status=403,
+                        mimetype="text/plain",
+                    )
                 )
-            )
 
     contact_enabled = bool(biz["contact_enabled"]) if "contact_enabled" in biz.keys() else False
     contact_email = biz["contact_email"] if "contact_email" in biz.keys() else None
@@ -2540,11 +2579,7 @@ def widget_config():
         log_reason("INVALID_API_KEY")
         return maybe_add_debug_header(resp, "INVALID_API_KEY")
 
-    demo_key = get_demo_api_key()
-    is_demo_context = bool(
-        (demo_key and api_key == demo_key)
-        or (request.args.get("demo") == "1")
-    )
+    is_demo_context = is_demo_request(api_key)
 
     if is_demo_context:
         payload = {

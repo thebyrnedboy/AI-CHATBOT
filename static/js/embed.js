@@ -30,8 +30,9 @@
     console.error("[TheoChat] BASE_URL not set. Add data-base-url to the script tag or set window.__CHATBOT_BASE_URL.");
     return;
   }
-  const ENDPOINT = BASE_URL.replace(/\/$/, "") + "/chat_stream?api_key=" + encodeURIComponent(API_KEY);
-  const CONFIG_URL = BASE_URL.replace(/\/$/, "") + "/widget_config?api_key=" + encodeURIComponent(API_KEY);
+  const demoSuffix = isDemo ? "&demo=1" : "";
+  const ENDPOINT = BASE_URL.replace(/\/$/, "") + "/chat_stream?api_key=" + encodeURIComponent(API_KEY) + demoSuffix;
+  const CONFIG_URL = BASE_URL.replace(/\/$/, "") + "/widget_config?api_key=" + encodeURIComponent(API_KEY) + demoSuffix;
   const logoUrl = baseUrl
     ? `${baseUrl.replace(/\/+$/, "")}/static/img/theochat-logo-mark.png`
     : "/static/img/theochat-logo-mark.png";
@@ -410,7 +411,7 @@
     contactStatus.textContent = "Sending...";
     contactStatus.style.color = "#4b5563";
     try {
-      const res = await fetch(BASE_URL.replace(/\/$/, "") + "/widget_contact?api_key=" + encodeURIComponent(API_KEY), {
+      const res = await fetch(BASE_URL.replace(/\/$/, "") + "/widget_contact?api_key=" + encodeURIComponent(API_KEY) + demoSuffix, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, phone, message })

@@ -216,7 +216,8 @@
     const debugMode = params.get('debug_widget') === '1';
     const debugPanel = document.getElementById('demo-widget-debug');
     const demoApiKey = "{{ demo_api_key }}";
-    const embedBase = "";
+    const embedBase = "{{ embed_base }}";
+    const embedBaseClean = (embedBase || "").replace(/\/+$/, "");
     const maskedKey = demoApiKey ? (demoApiKey.length > 8 ? demoApiKey.slice(0,4) + '…' + demoApiKey.slice(-4) : demoApiKey) : 'none';
 
     function setDebug(text) {
@@ -228,7 +229,7 @@
     if (debugMode) {
       setDebug(
         `<div><strong>Widget debug</strong></div>
-         <div>embed_base: ${embedBase || '(empty)'}</div>
+         <div>embed_base: ${embedBaseClean || '(empty)'}</div>
          <div>demo_api_key: ${maskedKey}</div>
          <div id="dbg-embed-status">embed.js: loading…</div>
          <div id="dbg-config-status">widget_config: pending</div>`
@@ -237,12 +238,16 @@
 
     if (demoApiKey) {
       const script = document.createElement('script');
-      const embedScriptUrl = `/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
-      window.__THEOCHAT_DEMO__ = { apiKey: demoApiKey, embedBase: embedBase || "(same-origin)", page: "marketing" };
+      const embedScriptUrl = `${embedBaseClean || ''}/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
+      window.__CHATBOT_BASE_URL = embedBaseClean || "";
+      window.__THEOCHAT_DEMO__ = { apiKey: demoApiKey, embedBase: embedBaseClean || "(same-origin)", page: "marketing" };
       console.debug("[TheoChat demo] loading embed.js from:", embedScriptUrl);
       console.info("[TheoChat demo] embed.js url", embedScriptUrl);
       script.src = embedScriptUrl;
       script.async = true;
+      if (embedBaseClean) {
+        script.setAttribute('data-base-url', embedBaseClean);
+      }
       script.onload = () => {
         if (debugMode) {
           const el = document.getElementById('dbg-embed-status');
@@ -263,7 +268,8 @@
       }, 3000);
 
       if (debugMode) {
-        fetch(`/widget_config?api_key=${encodeURIComponent(demoApiKey)}&demo=1&debug=1`)
+        const cfgUrl = `${embedBaseClean || ''}/widget_config?api_key=${encodeURIComponent(demoApiKey)}&demo=1&debug=1`;
+        fetch(cfgUrl)
           .then(async (res) => {
             const text = await res.text();
             const snippet = text.slice(0, 120).replace(/\s+/g, ' ');
