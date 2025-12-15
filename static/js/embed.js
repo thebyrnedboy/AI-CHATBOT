@@ -151,6 +151,9 @@
       panel.style.opacity = "1";
       panel.style.transform = "translateY(0)";
     });
+    try {
+      window.dispatchEvent(new CustomEvent("theochat:open"));
+    } catch (e) {}
   }
 
   function closePanel() {
@@ -159,6 +162,9 @@
     setTimeout(() => {
       panel.style.display = "none";
     }, 200);
+    try {
+      window.dispatchEvent(new CustomEvent("theochat:close"));
+    } catch (e) {}
   }
 
   const header = document.createElement("div");
@@ -316,6 +322,9 @@
   contactWrapper.appendChild(contactForm);
   contactWrapper.style.background = "#f9fafb";
   contactWrapper.style.paddingBottom = "10px";
+  contactWrapper.style.borderTop = "1px solid #e5e7eb";
+  contactWrapper.style.paddingLeft = "10px";
+  contactWrapper.style.paddingRight = "10px";
 
   const container = document.createElement("div");
   container.style.display = "flex";

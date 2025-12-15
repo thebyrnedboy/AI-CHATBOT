@@ -50,12 +50,12 @@
   #demo-widget-helper {
     position: fixed;
     bottom: 110px;
-    right: 24px;
+    right: 360px;
     max-width: 260px;
     background: linear-gradient(135deg, rgba(10,20,30,0.95), rgba(5,10,20,0.95));
     border: 1px solid rgba(100,180,200,0.25);
     border-radius: 14px;
-    padding: 12px 14px 14px;
+    padding: 12px 44px 14px 14px;
     color: #e6f2f5;
     font-size: 13px;
     box-shadow: 0 12px 30px rgba(0,0,0,0.35);
@@ -174,24 +174,21 @@
 
     const helper = document.getElementById('demo-widget-helper');
     const resetHelper = params.get('reset_demo_helper') === '1';
+    let dismissed = false;
     if (helper && demoApiKey) {
-      const KEY = 'theochat_demo_helper_dismissed';
-      let dismissed = false;
-      try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) { dismissed = false; }
-      if (resetHelper) {
-        try { localStorage.removeItem(KEY); } catch (e) {}
-        dismissed = false;
-      }
-      if (dismissed) { helper.remove(); }
       const closeBtn = helper.querySelector('.demo-widget-helper__close');
       function hideHelper() {
         if (helper.parentElement) helper.remove();
-        try { localStorage.setItem(KEY, '1'); } catch (e) {}
+        dismissed = true;
         cleanup();
       }
       if (closeBtn) closeBtn.addEventListener('click', hideHelper);
 
-      setTimeout(() => helper.classList.add('is-visible'), 2000);
+      setTimeout(() => {
+        if (dismissed) return;
+        helper.classList.add('is-visible');
+        trySmartPosition();
+      }, 2000);
 
       let observer = null;
       try {
@@ -223,6 +220,27 @@
       function cleanup() {
         if (observer) observer.disconnect();
         document.removeEventListener('click', clickListener, true);
+      }
+
+      function trySmartPosition() {
+        const launcher = document.getElementById('theochat-launcher');
+        if (!helper || !launcher) return;
+        const hRect = helper.getBoundingClientRect();
+        const lRect = launcher.getBoundingClientRect();
+        const overlaps = !(hRect.right < lRect.left || hRect.left > lRect.right || hRect.bottom < lRect.top || hRect.top > lRect.bottom);
+        if (overlaps) {
+          helper.style.right = '360px';
+          helper.style.bottom = '110px';
+        }
+      }
+
+      window.addEventListener('theochat:open', hideHelper);
+      if (resetHelper) {
+        dismissed = false;
+        if (!helper.classList.contains('is-visible')) {
+          helper.classList.add('is-visible');
+          trySmartPosition();
+        }
       }
     }
 
