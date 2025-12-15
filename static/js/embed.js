@@ -70,6 +70,7 @@
   const defaultLabel = "Chat with us";
   const customLabel = scriptEl && scriptEl.getAttribute("data-button-label");
   btn.textContent = customLabel || defaultLabel;
+  btn.id = "theochat-launcher";
   btn.style.position = "fixed";
   btn.style.bottom = isDemo ? "24px" : "16px";
   btn.style.right = isDemo ? "24px" : "16px";
@@ -85,6 +86,7 @@
 
   const panel = document.createElement("div");
   panel.style.position = "fixed";
+  panel.id = "theochat-panel";
   panel.style.bottom = isDemo ? "70px" : "60px";
   panel.style.right = isDemo ? "24px" : "16px";
   panel.style.width = "320px";
@@ -312,10 +314,13 @@
   const contactWrapper = document.createElement("div");
   contactWrapper.appendChild(contactLink);
   contactWrapper.appendChild(contactForm);
+  contactWrapper.style.background = "#f9fafb";
+  contactWrapper.style.paddingBottom = "10px";
 
   const container = document.createElement("div");
   container.style.display = "flex";
   container.style.flexDirection = "column";
+  container.style.height = "100%";
   container.appendChild(header);
   container.appendChild(chatArea);
   container.appendChild(inputRow);

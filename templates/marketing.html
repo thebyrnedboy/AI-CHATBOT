@@ -173,10 +173,15 @@
     const maskedKey = demoApiKey ? (demoApiKey.length > 8 ? demoApiKey.slice(0,4) + '…' + demoApiKey.slice(-4) : demoApiKey) : 'none';
 
     const helper = document.getElementById('demo-widget-helper');
+    const resetHelper = params.get('reset_demo_helper') === '1';
     if (helper && demoApiKey) {
       const KEY = 'theochat_demo_helper_dismissed';
       let dismissed = false;
       try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) { dismissed = false; }
+      if (resetHelper) {
+        try { localStorage.removeItem(KEY); } catch (e) {}
+        dismissed = false;
+      }
       if (dismissed) { helper.remove(); }
       const closeBtn = helper.querySelector('.demo-widget-helper__close');
       function hideHelper() {
@@ -196,7 +201,7 @@
               if (!(node instanceof HTMLElement)) continue;
               const id = (node.id || '').toLowerCase();
               const cls = (node.className || '').toString().toLowerCase();
-              if (id.includes('theochat') || cls.includes('theochat')) {
+              if (id.includes('theochat') || cls.includes('theochat') || id === 'theochat-panel' || id === 'theochat-launcher') {
                 hideHelper();
                 return;
               }
@@ -211,7 +216,7 @@
         if (!(t instanceof HTMLElement)) return;
         const id = (t.id || '').toLowerCase();
         const cls = (t.className || '').toString().toLowerCase();
-        if (id.includes('theochat') || cls.includes('theochat')) { hideHelper(); }
+        if (id.includes('theochat') || cls.includes('theochat') || id === 'theochat-panel' || id === 'theochat-launcher') { hideHelper(); }
       }
       document.addEventListener('click', clickListener, true);
 
