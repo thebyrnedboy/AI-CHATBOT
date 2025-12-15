@@ -1167,12 +1167,24 @@ def select_relevant_chunks(query: str, chunks: List[str], max_chunks: int = 3) -
     return [chunks[i] for (score, i) in scored if score > 0][:max_chunks]
 
 
+def demo_product_system_prompt() -> str:
+    return (
+        "You are demonstrating TheoChat for marketing purposes. "
+        "TheoChat is an AI chat widget added to a website with a small JavaScript snippet. "
+        "It learns from imported website content and uploaded documents to answer visitor questions. "
+        "Pricing: 7-day free trial, then from £19/month. "
+        "If a human should follow up, tell visitors they can use the 'Contact us' option. "
+        "Do not invent features. If asked for deep technical detail, give a brief summary and suggest the setup guide or support."
+    )
+
+
 def build_messages(
     user_id: int,
     business_id: int,
     user_msg: str,
     persona: str = "owner",
     contact_available: bool = False,
+    is_demo: bool = False,
 ):
     """
     Build the message list for the OpenAI chat completion call.
@@ -1190,7 +1202,8 @@ def build_messages(
         "You help answer questions about a business using its uploaded documents and website content. "
         "Always be clear, concise, and professional. Refer to yourself as Theo when introducing yourself, "
         "and refer to the product as TheoChat only when it helps the user understand the service. "
-        "If you don't know the answer from the provided context, say you're not sure and suggest contacting the business."
+        "If you don't know the answer from the provided context, say you're not sure and suggest contacting the business. "
+        "Keep responses concise: 2–5 sentences unless the user asks for more detail. Prefer bullet points for steps. Avoid repeating disclaimers."
     )
 
     if persona == "visitor" and contact_available:
@@ -1214,6 +1227,9 @@ def build_messages(
         system_prompt = base_prompt
 
     msgs = [{"role": "system", "content": system_prompt}]
+
+    if is_demo and persona == "visitor":
+        msgs.append({"role": "system", "content": demo_product_system_prompt()})
 
     for role, content in history:
         msgs.append({"role": role, "content": content})
@@ -2273,7 +2289,7 @@ def chat():
         return jsonify({"error": "Chat backend not configured"}), 500
 
     user_id = int(current_user.id)
-    msgs = build_messages(user_id, int(current_user.business_id), user_msg, persona="owner")
+    msgs = build_messages(user_id, int(current_user.business_id), user_msg, persona="owner", is_demo=False)
     try:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -2418,6 +2434,7 @@ def chat_stream():
                 user_msg,
                 persona=persona,
                 contact_available=(persona == "visitor" and contact_available),
+                is_demo=is_demo_context,
             )
             stream = client.chat.completions.create(
                 model="gpt-4o-mini",
