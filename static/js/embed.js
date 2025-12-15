@@ -151,7 +151,7 @@
       panel.style.opacity = "1";
       panel.style.transform = "translateY(0)";
     });
-    hideDemoHelper(false);
+    hideDemoHelper();
     try {
       window.dispatchEvent(new CustomEvent("theochat:open"));
     } catch (e) {}
@@ -163,6 +163,7 @@
     setTimeout(() => {
       panel.style.display = "none";
     }, 200);
+    showDemoHelper();
     try {
       window.dispatchEvent(new CustomEvent("theochat:close"));
     } catch (e) {}
@@ -340,16 +341,16 @@
   panel.appendChild(resizer);
 
   let demoHelper = null;
-  let helperDismissed = false;
-  const helperKey = "theochat_demo_helper_dismissed_v1";
 
-  function hideDemoHelper(setDismissed = false) {
+  function hideDemoHelper() {
     if (!demoHelper) return;
     demoHelper.classList.remove("is-visible");
-    if (setDismissed) {
-      helperDismissed = true;
-      try { localStorage.setItem(helperKey, "1"); } catch (e) {}
-    }
+  }
+
+  function showDemoHelper() {
+    if (!demoHelper) return;
+    demoHelper.classList.add("is-visible");
+    adjustHelperPosition();
   }
 
   function adjustHelperPosition() {
@@ -365,25 +366,16 @@
   }
 
   function createDemoHelper() {
-    try { helperDismissed = localStorage.getItem(helperKey) === "1"; } catch (e) { helperDismissed = false; }
-    if (helperDismissed) return;
     demoHelper = document.createElement("div");
     demoHelper.className = "demo-widget-helper";
     demoHelper.id = "tc-demo-helper";
     demoHelper.innerHTML = `
       <div class="demo-widget-helper__title">This is what the TheoChat chatbot would look like on your page.</div>
       <p>Try asking a question, or click Contact us.</p>
-      <button class="demo-widget-helper__close demo-widget-helper__close--center" type="button" aria-label="Dismiss">×</button>
     `;
     document.body.appendChild(demoHelper);
-    const closeBtn = demoHelper.querySelector(".demo-widget-helper__close");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", () => hideDemoHelper(true));
-    }
     setTimeout(() => {
-      if (helperDismissed) return;
-      demoHelper.classList.add("is-visible");
-      adjustHelperPosition();
+      showDemoHelper();
     }, 250);
     let resizeTimer = null;
     window.addEventListener("resize", () => {
