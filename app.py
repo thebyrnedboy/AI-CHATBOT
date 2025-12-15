@@ -1664,13 +1664,22 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
     demo_api_key = DEMO_API_KEY or THEOCHAT_DEMO_API_KEY or get_demo_api_key() or ""
-    embed_base = ""  # same-origin
-    print(
-        "[TheoChat] marketing demo_api_key present:",
-        bool(demo_api_key),
-        "prefix:",
-        (demo_api_key[:8] + "..." if demo_api_key else "NONE"),
-    )
+    host_val = request.host or ""
+    if "theochat.co.uk" in host_val.lower():
+        embed_base = "https://www.theochat.co.uk"
+    elif host_val:
+        embed_base = f"https://{host_val}"
+    else:
+        embed_base = "https://www.theochat.co.uk"
+    try:
+        app.logger.info(
+            "[TheoChat demo] embed_base=%s host=%s scheme=https key_prefix=%s",
+            embed_base,
+            host_val,
+            (demo_api_key[:4] + "..." + demo_api_key[-4:] if len(demo_api_key) >= 8 else (demo_api_key or "NONE")),
+        )
+    except Exception:
+        pass
     return render_template("marketing.html", demo_api_key=demo_api_key, embed_base=embed_base)
 
 
@@ -1867,13 +1876,22 @@ def marketing():
     except Exception:
         pass
     demo_api_key = DEMO_API_KEY or THEOCHAT_DEMO_API_KEY or get_demo_api_key() or ""
-    embed_base = ""  # same-origin
-    print(
-        "[TheoChat] marketing demo_api_key present:",
-        bool(demo_api_key),
-        "prefix:",
-        (demo_api_key[:8] + "..." if demo_api_key else "NONE"),
-    )
+    host_val = request.host or ""
+    if "theochat.co.uk" in host_val.lower():
+        embed_base = "https://www.theochat.co.uk"
+    elif host_val:
+        embed_base = f"https://{host_val}"
+    else:
+        embed_base = "https://www.theochat.co.uk"
+    try:
+        app.logger.info(
+            "[TheoChat demo] embed_base=%s host=%s scheme=https key_prefix=%s",
+            embed_base,
+            host_val,
+            (demo_api_key[:4] + "..." + demo_api_key[-4:] if len(demo_api_key) >= 8 else (demo_api_key or "NONE")),
+        )
+    except Exception:
+        pass
     return render_template("marketing.html", demo_api_key=demo_api_key, embed_base=embed_base)
 
 
