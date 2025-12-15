@@ -553,6 +553,36 @@
       overflow: hidden;
     }
 
+    .tc-api-pill {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .tc-api-pill::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      transform: translate(-50%, -6px);
+      background: rgba(15, 23, 42, 0.95);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 20;
+    }
+
+    .tc-api-pill:hover::after,
+    .tc-api-pill:focus-visible::after {
+      opacity: 1;
+      transform: translate(-50%, -10px);
+    }
+
     .tc-api-pill-label {
       font-weight: 600;
       opacity: 0.9;
@@ -1037,7 +1067,7 @@
       <div class="nav-right">
         <button id="theme-toggle" type="button" class="pill">Dark mode</button>
         {% if current_user.is_authenticated and current_business_api_key %}
-          <div class="tc-api-pill">
+          <div class="tc-api-pill" data-api-key="{{ current_business_api_key }}" aria-label="Copy API key to clipboard">
             <div class="tc-api-pill-label">API key</div>
             <div class="tc-api-pill-value">{{ current_business_api_key }}</div>
           </div>
@@ -1370,6 +1400,24 @@
         }
       }).catch(function () {
         // leave text as-is on failure
+      });
+    });
+  </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const pill = document.querySelector(".tc-api-pill[data-api-key]");
+      if (!pill) return;
+      const apiKey = pill.getAttribute("data-api-key") || "";
+      pill.setAttribute("data-tooltip", "Click to copy");
+      pill.addEventListener("click", async function () {
+        try {
+          await navigator.clipboard.writeText(apiKey);
+          pill.setAttribute("data-tooltip", "Copied!");
+          setTimeout(() => pill.setAttribute("data-tooltip", "Click to copy"), 1000);
+        } catch (e) {
+          pill.setAttribute("data-tooltip", "Copy failed");
+          setTimeout(() => pill.setAttribute("data-tooltip", "Click to copy"), 1200);
+        }
       });
     });
   </script>
