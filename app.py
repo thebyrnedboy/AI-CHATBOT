@@ -232,19 +232,36 @@ def generate_api_key() -> str:
     return "biz_" + secrets.token_urlsafe(24)
 
 
+import logging
+from typing import Optional
+
 def get_demo_api_key() -> Optional[str]:
+    # Check environment variables first
     if DEMO_API_KEY:
+        logging.debug("Returning DEMO_API_KEY from env: %s", DEMO_API_KEY)
         return DEMO_API_KEY
     if THEOCHAT_DEMO_API_KEY:
+        logging.debug("Returning THEOCHAT_DEMO_API_KEY from env: %s", THEOCHAT_DEMO_API_KEY)
         return THEOCHAT_DEMO_API_KEY
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT api_key FROM businesses WHERE name = ? LIMIT 1", ("TheoChat Demo",))
-    row = c.fetchone()
-    conn.close()
-    if row and row["api_key"]:
-        return row["api_key"]
-    return None
+
+    # Fallback to database check
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT api_key FROM businesses WHERE name = ? LIMIT 1", ("TheoChat Demo",))
+        row = c.fetchone()
+        conn.close()
+
+        if row and row["api_key"]:
+            logging.debug("Found API key for TheoChat Demo in DB: %s", row["api_key"])
+            return row["api_key"]
+        else:
+            logging.warning("No API key found for TheoChat Demo in the database.")
+            return None
+    except Exception as e:
+        logging.error("Error retrieving demo API key from database: %s", str(e))
+        return None
+
 
 
 def create_import_job(user_id: int, business_id: int) -> int:
