@@ -38,11 +38,23 @@
     : "/static/img/theochat-logo-mark.png";
 
   const DEFAULTS = {
-    primary: "#2563eb",
-    secondary: "#1d4ed8",
-    font: "system-ui, -apple-system, 'Segoe UI', sans-serif",
-    radius: "12px",
+    primary: "#0f766e",
+    secondary: "#22c55e",
+    font: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
+    radius: "999px",
   };
+
+  function readCSSVar(names = []) {
+    const style = getComputedStyle(document.documentElement);
+    for (const name of names) {
+      const val = style.getPropertyValue(name);
+      if (val && val.trim()) return val.trim();
+    }
+    return null;
+  }
+
+  const inferredPrimary = readCSSVar(["--primary", "--color-primary", "--brand", "--accent", "--theme-primary"]);
+  const inferredSecondary = readCSSVar(["--secondary", "--color-secondary", "--brand-secondary", "--accent-secondary"]);
 
   let theme = { ...DEFAULTS };
   try {
@@ -55,9 +67,21 @@
         font: data.theme_font_family || DEFAULTS.font,
         radius: data.theme_border_radius || DEFAULTS.radius,
       };
+    } else {
+      theme = {
+        primary: inferredPrimary || DEFAULTS.primary,
+        secondary: inferredSecondary || DEFAULTS.secondary,
+        font: DEFAULTS.font,
+        radius: DEFAULTS.radius,
+      };
     }
   } catch (e) {
-    // ignore config fetch errors; fall back to defaults
+    theme = {
+      primary: inferredPrimary || DEFAULTS.primary,
+      secondary: inferredSecondary || DEFAULTS.secondary,
+      font: DEFAULTS.font,
+      radius: DEFAULTS.radius,
+    };
   }
 
   const root = document.documentElement;
@@ -66,23 +90,161 @@
   root.style.setProperty("--theochat-font-family", theme.font);
   root.style.setProperty("--theochat-radius", theme.radius);
 
+  function hexToRgb(hex) {
+    const cleaned = hex.replace("#", "");
+    if (cleaned.length === 3) {
+      const r = cleaned[0] + cleaned[0];
+      const g = cleaned[1] + cleaned[1];
+      const b = cleaned[2] + cleaned[2];
+      return [parseInt(r, 16), parseInt(g, 16), parseInt(b, 16)];
+    }
+    if (cleaned.length === 6) {
+      return [parseInt(cleaned.slice(0, 2), 16), parseInt(cleaned.slice(2, 4), 16), parseInt(cleaned.slice(4, 6), 16)];
+    }
+    return null;
+  }
+
+  function luminance(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 0.5;
+    const [r, g, b] = rgb.map((v) => {
+      const n = v / 255;
+      return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  const primaryLum = luminance(theme.primary.toLowerCase());
+  const launcherText = primaryLum > 0.62 ? "#0b1224" : "#f8fafc";
+
+  function normalizeRadius(val) {
+    if (!val) return "999px";
+    const match = String(val).match(/([\d\.]+)px/);
+    if (!match) return val;
+    const num = parseFloat(match[1]);
+    const clamped = Math.max(num, 14);
+    return `${clamped}px`;
+  }
+
+  const launcherRadius = normalizeRadius(theme.radius || DEFAULTS.radius);
+  root.style.setProperty("--tc-primary", theme.primary);
+  root.style.setProperty("--tc-secondary", theme.secondary);
+  root.style.setProperty("--tc-font", theme.font);
+  root.style.setProperty("--tc-radius-launcher", launcherRadius);
+  root.style.setProperty("--tc-launcher-text", launcherText);
+
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    .theochat-launcher {
+      position: fixed;
+      bottom: ${isDemo ? "24px" : "16px"};
+      right: ${isDemo ? "24px" : "16px"};
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--tc-radius-launcher, 999px);
+      background: linear-gradient(135deg, var(--tc-primary, #0f766e), var(--tc-secondary, #22c55e));
+      color: var(--tc-launcher-text, #f8fafc);
+      font-family: var(--tc-font, ${DEFAULTS.font});
+      font-weight: 600;
+      font-size: 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.14);
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .theochat-powered {
+      display: block;
+      margin: 10px 0 0;
+      font-size: 12px;
+      text-align: center;
+      color: rgba(15,23,42,0.7);
+      text-decoration: none;
+      opacity: 0.8;
+    }
+    .theochat-powered:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .dark .theochat-powered {
+      color: rgba(255,255,255,0.78);
+    }
+    .theochat-launcher::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(255,255,255,0.2), transparent 40%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    .theochat-launcher:hover::before {
+      opacity: 0.6;
+    }
+    .theochat-launcher:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.28), 0 6px 14px rgba(0,0,0,0.18);
+    }
+    .theochat-launcher:active {
+      transform: translateY(0) scale(0.99);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+    .theochat-launcher:focus-visible {
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35), 0 10px 24px rgba(0,0,0,0.22);
+    }
+    .theochat-launcher__icon {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .theochat-launcher__icon svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      fill: currentColor;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .theochat-launcher,
+      .theochat-launcher::before {
+        transition: none !important;
+      }
+      .theochat-launcher:hover {
+        transform: none;
+      }
+      .theochat-launcher:active {
+        transform: none;
+      }
+    }
+    @media (max-width: 480px) {
+      .theochat-launcher {
+        padding: 10px 14px;
+        bottom: ${isDemo ? "20px" : "14px"};
+        right: ${isDemo ? "20px" : "14px"};
+      }
+    }
+  `;
+  document.head.appendChild(styleEl);
+
   const btn = document.createElement("button");
   const defaultLabel = "Chat with us";
   const customLabel = scriptEl && scriptEl.getAttribute("data-button-label");
-  btn.textContent = customLabel || defaultLabel;
+  btn.className = "theochat-launcher";
+  btn.type = "button";
   btn.id = "theochat-launcher";
-  btn.style.position = "fixed";
-  btn.style.bottom = isDemo ? "24px" : "16px";
-  btn.style.right = isDemo ? "24px" : "16px";
-  btn.style.zIndex = 9999;
-  btn.style.background = "var(--theochat-primary, #2563eb)";
-  btn.style.color = "#fff";
-  btn.style.border = "none";
-  btn.style.borderRadius = "999px";
-  btn.style.padding = "10px 14px";
-  btn.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
-  btn.style.cursor = "pointer";
-  btn.style.fontFamily = "var(--theochat-font-family, " + DEFAULTS.font + ")";
+  btn.innerHTML = `
+    <span class="theochat-launcher__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M4 4.75C4 3.784 4.784 3 5.75 3h12.5C19.216 3 20 3.784 20 4.75v8.5c0 .966-.784 1.75-1.75 1.75H8.414l-3.02 2.817A.75.75 0 0 1 4 17.25v-12.5Z"></path>
+      </svg>
+    </span>
+    <span class="theochat-launcher__label">${customLabel || defaultLabel}</span>
+  `;
 
   const panel = document.createElement("div");
   panel.style.position = "fixed";
@@ -328,6 +490,23 @@
   contactWrapper.style.paddingLeft = "10px";
   contactWrapper.style.paddingRight = "10px";
 
+  const powered = document.createElement("a");
+  const marketingUrl = (scriptEl && scriptEl.getAttribute("data-theochat-site")) || "https://www.theochat.co.uk/";
+  powered.href = marketingUrl;
+  powered.target = "_blank";
+  powered.rel = "noopener noreferrer";
+  powered.textContent = "Powered by TheoChat";
+  powered.className = "theochat-powered";
+  powered.style.display = "block";
+  powered.style.margin = "8px 0 0";
+  powered.style.fontSize = "12px";
+  powered.style.opacity = "0.8";
+  powered.style.textDecoration = "none";
+  powered.style.color = "#0f172a";
+  powered.style.textAlign = "center";
+  powered.addEventListener("mouseover", () => { powered.style.opacity = "1"; powered.style.textDecoration = "underline"; });
+  powered.addEventListener("mouseout", () => { powered.style.opacity = "0.8"; powered.style.textDecoration = "none"; });
+
   const container = document.createElement("div");
   container.style.display = "flex";
   container.style.flexDirection = "column";
@@ -336,6 +515,7 @@
   container.appendChild(chatArea);
   container.appendChild(inputRow);
   container.appendChild(contactWrapper);
+  contactWrapper.appendChild(powered);
 
   panel.appendChild(container);
   panel.appendChild(resizer);
