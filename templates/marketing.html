@@ -157,61 +157,13 @@
   <strong>This is how TheoChat will look on your site</strong>
   <p>Try it now — ask Theo about TheoChat.</p>
 </div>
+{% endif %}
 {% if request.args.get('debug_widget') %}
 <!-- TheoChat demo: demo_api_key_present={{ (demo_api_key is not none and demo_api_key != '') | tojson }} embed_base={{ embed_base|default('')|tojson }} endpoint={{ request.endpoint|default('') }} -->
 {% endif %}
 <div id="demo-widget-debug" style="display:none;position:fixed;bottom:8px;right:8px;z-index:9998;background:rgba(15,23,42,0.95);color:#e5e7eb;border:1px solid rgba(148,163,184,0.4);border-radius:10px;padding:10px;max-width:320px;font-size:12px;line-height:1.4;"></div>
 <script>
   (function() {
-    const helper = document.getElementById('demo-widget-helper');
-    if (!helper) return;
-    const KEY = 'theochat_demo_helper_dismissed';
-    let dismissed = false;
-    try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) { dismissed = false; }
-    if (dismissed) { helper.remove(); return; }
-
-    const closeBtn = helper.querySelector('.demo-widget-helper__close');
-    function hideHelper() {
-      helper.remove();
-      try { localStorage.setItem(KEY, '1'); } catch (e) {}
-      cleanup();
-    }
-    if (closeBtn) closeBtn.addEventListener('click', hideHelper);
-
-    setTimeout(() => helper.classList.add('is-visible'), 2000);
-
-    let observer = null;
-    try {
-      observer = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-          for (const node of m.addedNodes) {
-            if (!(node instanceof HTMLElement)) continue;
-            const id = (node.id || '').toLowerCase();
-            const cls = (node.className || '').toString().toLowerCase();
-            if (id.includes('theochat') || cls.includes('theochat')) {
-              hideHelper();
-              return;
-            }
-          }
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    } catch (e) {}
-
-    function clickListener(e) {
-      const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
-      const id = (t.id || '').toLowerCase();
-      const cls = (t.className || '').toString().toLowerCase();
-      if (id.includes('theochat') || cls.includes('theochat')) { hideHelper(); }
-    }
-    document.addEventListener('click', clickListener, true);
-
-    function cleanup() {
-      if (observer) observer.disconnect();
-      document.removeEventListener('click', clickListener, true);
-    }
-
     const params = new URLSearchParams(window.location.search);
     const debugMode = params.get('debug_widget') === '1';
     const debugPanel = document.getElementById('demo-widget-debug');
@@ -219,6 +171,55 @@
     const embedBase = "{{ embed_base }}";
     const embedBaseClean = (embedBase || "").replace(/\/+$/, "");
     const maskedKey = demoApiKey ? (demoApiKey.length > 8 ? demoApiKey.slice(0,4) + '…' + demoApiKey.slice(-4) : demoApiKey) : 'none';
+
+    const helper = document.getElementById('demo-widget-helper');
+    if (helper && demoApiKey) {
+      const KEY = 'theochat_demo_helper_dismissed';
+      let dismissed = false;
+      try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) { dismissed = false; }
+      if (dismissed) { helper.remove(); }
+      const closeBtn = helper.querySelector('.demo-widget-helper__close');
+      function hideHelper() {
+        if (helper.parentElement) helper.remove();
+        try { localStorage.setItem(KEY, '1'); } catch (e) {}
+        cleanup();
+      }
+      if (closeBtn) closeBtn.addEventListener('click', hideHelper);
+
+      setTimeout(() => helper.classList.add('is-visible'), 2000);
+
+      let observer = null;
+      try {
+        observer = new MutationObserver((mutations) => {
+          for (const m of mutations) {
+            for (const node of m.addedNodes) {
+              if (!(node instanceof HTMLElement)) continue;
+              const id = (node.id || '').toLowerCase();
+              const cls = (node.className || '').toString().toLowerCase();
+              if (id.includes('theochat') || cls.includes('theochat')) {
+                hideHelper();
+                return;
+              }
+            }
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      } catch (e) {}
+
+      function clickListener(e) {
+        const t = e.target;
+        if (!(t instanceof HTMLElement)) return;
+        const id = (t.id || '').toLowerCase();
+        const cls = (t.className || '').toString().toLowerCase();
+        if (id.includes('theochat') || cls.includes('theochat')) { hideHelper(); }
+      }
+      document.addEventListener('click', clickListener, true);
+
+      function cleanup() {
+        if (observer) observer.disconnect();
+        document.removeEventListener('click', clickListener, true);
+      }
+    }
 
     function setDebug(text) {
       if (!debugMode || !debugPanel) return;
@@ -236,54 +237,63 @@
       );
     }
 
-    if (demoApiKey) {
-      const script = document.createElement('script');
-      const embedScriptUrl = `${embedBaseClean || ''}/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
-      window.__CHATBOT_BASE_URL = embedBaseClean || "";
-      window.__THEOCHAT_DEMO__ = { apiKey: demoApiKey, embedBase: embedBaseClean || "(same-origin)", page: "marketing" };
-      console.debug("[TheoChat demo] loading embed.js from:", embedScriptUrl);
-      console.info("[TheoChat demo] embed.js url", embedScriptUrl);
-      script.src = embedScriptUrl;
-      script.async = true;
-      if (embedBaseClean) {
-        script.setAttribute('data-base-url', embedBaseClean);
-      }
-      script.onload = () => {
-        if (debugMode) {
-          const el = document.getElementById('dbg-embed-status');
-          if (el) el.textContent = 'embed.js: loaded';
-        }
-      };
-      script.onerror = () => {
-        if (debugMode) {
-          const el = document.getElementById('dbg-embed-status');
-          if (el) el.textContent = 'embed.js: failed to load';
-        }
-      };
-      document.head.appendChild(script);
-      setTimeout(() => {
-        if (!document.querySelector('[id^="theochat"]')) {
-          console.warn("[TheoChat demo] Widget did not mount", window.__THEOCHAT_DEMO__);
-        }
-      }, 3000);
-
+    if (!demoApiKey) {
+      console.warn("[TheoChat demo] demo_api_key missing; widget injection skipped");
       if (debugMode) {
-        const cfgUrl = `${embedBaseClean || ''}/widget_config?api_key=${encodeURIComponent(demoApiKey)}&demo=1&debug=1`;
-        fetch(cfgUrl)
-          .then(async (res) => {
-            const text = await res.text();
-            const snippet = text.slice(0, 120).replace(/\s+/g, ' ');
-            const el = document.getElementById('dbg-config-status');
-            if (el) el.textContent = `widget_config: ${res.status} ${snippet}`;
-          })
-          .catch((err) => {
-            const el = document.getElementById('dbg-config-status');
-            if (el) el.textContent = `widget_config error: ${err && err.message ? err.message : 'unknown error'}`;
-          });
+        setDebug(
+          `<div><strong>Widget debug</strong></div>
+           <div>embed_base: ${embedBaseClean || '(empty)'}</div>
+           <div>demo_api_key missing; widget injection skipped</div>`
+        );
       }
+      return;
+    }
+
+    const script = document.createElement('script');
+    const embedScriptUrl = `${embedBaseClean || ''}/embed.js?api_key=${encodeURIComponent(demoApiKey)}`;
+    window.__CHATBOT_BASE_URL = embedBaseClean || "";
+    window.__THEOCHAT_DEMO__ = { apiKey: demoApiKey, embedBase: embedBaseClean || "(same-origin)", page: "marketing" };
+    console.debug("[TheoChat demo] loading embed.js from:", embedScriptUrl);
+    console.info("[TheoChat demo] embed.js url", embedScriptUrl);
+    script.src = embedScriptUrl;
+    script.async = true;
+    if (embedBaseClean) {
+      script.setAttribute('data-base-url', embedBaseClean);
+    }
+    script.onload = () => {
+      if (debugMode) {
+        const el = document.getElementById('dbg-embed-status');
+        if (el) el.textContent = 'embed.js: loaded';
+      }
+    };
+    script.onerror = () => {
+      if (debugMode) {
+        const el = document.getElementById('dbg-embed-status');
+        if (el) el.textContent = 'embed.js: failed to load';
+      }
+    };
+    document.head.appendChild(script);
+    setTimeout(() => {
+      if (!document.querySelector('[id^="theochat"]')) {
+        console.warn("[TheoChat demo] Widget did not mount", window.__THEOCHAT_DEMO__);
+      }
+    }, 3000);
+
+    if (debugMode) {
+      const cfgUrl = `${embedBaseClean || ''}/widget_config?api_key=${encodeURIComponent(demoApiKey)}&demo=1&debug=1`;
+      fetch(cfgUrl)
+        .then(async (res) => {
+          const text = await res.text();
+          const snippet = text.slice(0, 120).replace(/\s+/g, ' ');
+          const el = document.getElementById('dbg-config-status');
+          if (el) el.textContent = `widget_config: ${res.status} ${snippet}`;
+        })
+        .catch((err) => {
+          const el = document.getElementById('dbg-config-status');
+          if (el) el.textContent = `widget_config error: ${err && err.message ? err.message : 'unknown error'}`;
+        });
     }
   })();
 </script>
-{% endif %}
 
 {% endblock %}
