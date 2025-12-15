@@ -263,7 +263,7 @@
       }, 3000);
 
       if (debugMode) {
-        fetch(`/widget_config?api_key=${encodeURIComponent(demoApiKey)}`)
+        fetch(`/widget_config?api_key=${encodeURIComponent(demoApiKey)}&demo=1&debug=1`)
           .then(async (res) => {
             const text = await res.text();
             const snippet = text.slice(0, 120).replace(/\s+/g, ' ');

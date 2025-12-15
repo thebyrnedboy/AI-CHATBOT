@@ -2477,21 +2477,55 @@ def widget_contact():
 @app.get("/widget_config")
 def widget_config():
     api_key = (request.args.get("api_key") or request.headers.get("X-API-Key") or "").strip()
+
+    def mask_key(val: str) -> str:
+        if not val:
+            return "NONE"
+        return val if len(val) < 8 else f"{val[:4]}…{val[-4:]}"
+
+    def req_meta() -> tuple[str, str, str]:
+        host = request.host or ""
+        origin = request.headers.get("Origin", "")
+        referer = request.headers.get("Referer", "")
+        return host, origin, referer
+
+    def log_reason(reason: str, biz_id=None, owner_id=None):
+        if not DEBUG_LOGS:
+            return
+        host, origin, referer = req_meta()
+        try:
+            app.logger.info(
+                "[TheoChat widget_config] reason=%s key=%s host=%s origin=%s referer=%s biz_id=%s owner_id=%s",
+                reason,
+                mask_key(api_key),
+                host,
+                origin,
+                referer,
+                biz_id,
+                owner_id,
+            )
+        except Exception:
+            pass
+
+    def maybe_add_debug_header(resp: Response, reason: str):
+        if DEBUG_LOGS and request.args.get("debug") == "1" and resp.status_code != 200:
+            resp.headers["X-TheoChat-Block-Reason"] = reason
+        return resp
+
     if not api_key:
-        return add_cors(
-            Response("Error: Missing API key", status=400, mimetype="text/plain")
-        )
+        resp = add_cors(Response("Error: Missing API key", status=400, mimetype="text/plain"))
+        log_reason("MISSING_API_KEY")
+        return maybe_add_debug_header(resp, "MISSING_API_KEY")
 
     biz = get_business_by_api_key(api_key)
     if not biz:
-        return add_cors(
-            Response("Error: Invalid API key", status=403, mimetype="text/plain")
-        )
+        resp = add_cors(Response("Error: Invalid API key", status=403, mimetype="text/plain"))
+        log_reason("INVALID_API_KEY")
+        return maybe_add_debug_header(resp, "INVALID_API_KEY")
 
     demo_key = get_demo_api_key()
     is_demo_context = bool(
         (demo_key and api_key == demo_key)
-        or request.endpoint == "marketing"
         or (request.args.get("demo") == "1")
     )
 
@@ -2502,6 +2536,7 @@ def widget_config():
             "theme_font_family": biz["theme_font_family"] if "theme_font_family" in biz.keys() else None,
             "theme_border_radius": biz["theme_border_radius"] if "theme_border_radius" in biz.keys() else None,
         }
+        log_reason("DEMO_BYPASS", biz_id=biz["id"] if "id" in biz.keys() else None, owner_id=biz["owner_user_id"] if "owner_user_id" in biz.keys() else None)
         return add_cors(jsonify(payload))
 
     allowed = parse_allowed_domains(biz["allowed_domains"] or "")
@@ -2517,33 +2552,39 @@ def widget_config():
             if not host and DEBUG_LOGS:
                 print("Domain allowlist: missing or invalid Referer/Origin; cannot determine host.")
         if not host:
-            return add_cors(
+            resp = add_cors(
                 Response(
                     "Blocked: could not determine requesting site. Ensure your site sends a Referer or Origin header and that the domain is on your allowlist.",
                     status=403,
                     mimetype="text/plain",
                 )
             )
+            log_reason("DOMAIN_HOST_MISSING", biz_id=biz["id"] if "id" in biz.keys() else None, owner_id=biz["owner_user_id"] if "owner_user_id" in biz.keys() else None)
+            return maybe_add_debug_header(resp, "DOMAIN_HOST_MISSING")
         if not any(host == d or host.endswith("." + d) for d in allowed):
             if DEBUG_LOGS:
                 print(f"Domain allowlist: host '{host}' not in allowed domains {allowed}")
-            return add_cors(
+            resp = add_cors(
                 Response(
                     "Error: Domain not allowed for this API key.",
                     status=403,
                     mimetype="text/plain",
                 )
             )
+            log_reason("DOMAIN_BLOCKED", biz_id=biz["id"] if "id" in biz.keys() else None, owner_id=biz["owner_user_id"] if "owner_user_id" in biz.keys() else None)
+            return maybe_add_debug_header(resp, "DOMAIN_BLOCKED")
 
     owner = load_user(biz["owner_user_id"]) if biz["owner_user_id"] else None
     if not owner or not getattr(owner, "has_active_subscription", False):
-        return add_cors(
+        resp = add_cors(
             Response(
                 "Error: Subscription inactive. Widget config is disabled for this business.",
                 status=402,
                 mimetype="text/plain",
             )
         )
+        log_reason("SUBSCRIPTION_INACTIVE", biz_id=biz["id"] if "id" in biz.keys() else None, owner_id=biz["owner_user_id"] if "owner_user_id" in biz.keys() else None)
+        return maybe_add_debug_header(resp, "SUBSCRIPTION_INACTIVE")
 
     payload = {
         "theme_primary_color": biz["theme_primary_color"] if "theme_primary_color" in biz.keys() else None,
