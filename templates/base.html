@@ -556,10 +556,23 @@
     .tc-api-pill {
       position: relative;
       cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
     }
 
-    .tc-api-pill::after {
-      content: attr(data-tooltip);
+    .tc-api-pill:hover,
+    .tc-api-pill:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+      border-color: rgba(148, 163, 184, 0.7);
+      outline: none;
+    }
+
+    .tc-api-pill:focus-visible {
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+    }
+
+    .tc-api-pill-tooltip {
       position: absolute;
       left: 50%;
       bottom: 100%;
@@ -570,17 +583,54 @@
       padding: 4px 8px;
       border-radius: 6px;
       font-size: 11px;
-      white-space: nowrap;
+      min-width: 90px;
+      max-width: 180px;
+      text-align: center;
+      white-space: normal;
+      line-height: 1.3;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.15s ease, transform 0.15s ease;
       z-index: 20;
     }
 
-    .tc-api-pill:hover::after,
-    .tc-api-pill:focus-visible::after {
+    .tc-api-pill:hover .tc-api-pill-tooltip,
+    .tc-api-pill:focus-visible .tc-api-pill-tooltip {
       opacity: 1;
       transform: translate(-50%, -10px);
+    }
+
+    .tc-api-pill.copied {
+      animation: apiCopiedFlash 0.6s ease;
+    }
+
+    @keyframes apiCopiedFlash {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35); }
+      50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.15); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .tc-toast {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: rgba(15, 23, 42, 0.95);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 2000;
+      pointer-events: none;
+    }
+
+    .tc-toast.show {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .tc-api-pill-label {
@@ -1067,9 +1117,18 @@
       <div class="nav-right">
         <button id="theme-toggle" type="button" class="pill">Dark mode</button>
         {% if current_user.is_authenticated and current_business_api_key %}
-          <div class="tc-api-pill" data-api-key="{{ current_business_api_key }}" aria-label="Copy API key to clipboard">
+          {% set _key = current_business_api_key %}
+          {% set masked_key = _key[:8] ~ '…' ~ _key[-4:] if _key|length > 12 else _key %}
+          <div
+            class="tc-api-pill"
+            role="button"
+            tabindex="0"
+            aria-label="Copy API key"
+            data-full-key="{{ current_business_api_key }}"
+          >
             <div class="tc-api-pill-label">API key</div>
-            <div class="tc-api-pill-value">{{ current_business_api_key }}</div>
+            <div class="tc-api-pill-value">{{ masked_key }}</div>
+            <span class="tc-api-pill-tooltip">Click to copy</span>
           </div>
         {% endif %}
 
@@ -1420,6 +1479,57 @@
         }
       });
     });
+  </script>
+  <script>
+    (function () {
+      const pill = document.querySelector(".tc-api-pill[data-full-key]");
+      if (!pill) return;
+      const fullKey = pill.getAttribute("data-full-key") || "";
+      const tooltip = pill.querySelector(".tc-api-pill-tooltip");
+
+      function showToast(message) {
+        let toast = document.querySelector(".tc-toast");
+        if (!toast) {
+          toast = document.createElement("div");
+          toast.className = "tc-toast";
+          document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        requestAnimationFrame(() => {
+          toast.classList.add("show");
+          setTimeout(() => {
+            toast.classList.remove("show");
+          }, 1500);
+        });
+      }
+
+      async function copyKey() {
+        try {
+          await navigator.clipboard.writeText(fullKey);
+          pill.classList.add("copied");
+          if (tooltip) tooltip.textContent = "Copied!";
+          showToast("Code copied!");
+          setTimeout(() => {
+            pill.classList.remove("copied");
+            if (tooltip) tooltip.textContent = "Click to copy";
+          }, 1000);
+        } catch (e) {
+          if (tooltip) tooltip.textContent = "Copy failed";
+          showToast("Couldn't copy — select and copy manually");
+          setTimeout(() => {
+            if (tooltip) tooltip.textContent = "Click to copy";
+          }, 1200);
+        }
+      }
+
+      pill.addEventListener("click", copyKey);
+      pill.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          copyKey();
+        }
+      });
+    })();
   </script>
 </body>
 </html>
