@@ -41,7 +41,7 @@
     primary: "#0f766e",
     secondary: "#22c55e",
     font: "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif",
-    radius: "999px",
+    radius: "12px",
   };
 
   function readCSSVar(names = []) {
@@ -126,7 +126,17 @@
     return `${clamped}px`;
   }
 
-  const launcherRadius = normalizeRadius(theme.radius || DEFAULTS.radius);
+  const launcherRadius = normalizeRadius(theme.radius ? theme.radius : "999px");
+  function normalizePanelRadius(val) {
+    const fallback = DEFAULTS.radius;
+    if (!val) return fallback;
+    const match = String(val).match(/([\d\.]+)px/);
+    if (!match) return fallback;
+    const num = parseFloat(match[1]);
+    const clamped = Math.min(Math.max(num, 12), 20);
+    return `${clamped}px`;
+  }
+  const panelRadius = normalizePanelRadius(theme.radius);
   root.style.setProperty("--tc-primary", theme.primary);
   root.style.setProperty("--tc-secondary", theme.secondary);
   root.style.setProperty("--tc-font", theme.font);
@@ -256,7 +266,8 @@
   panel.style.background = "#fff";
   panel.style.color = "#111";
   panel.style.border = "1px solid #e5e7eb";
-  panel.style.borderRadius = "var(--theochat-radius, 12px)";
+  // Panel styles must not share launcher radius rules.
+  panel.style.borderRadius = panelRadius;
   panel.style.boxShadow = "0 10px 30px rgba(0,0,0,0.25)";
   panel.style.display = "none";
   panel.style.flexDirection = "column";
