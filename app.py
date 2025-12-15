@@ -1169,12 +1169,13 @@ def select_relevant_chunks(query: str, chunks: List[str], max_chunks: int = 3) -
 
 def demo_product_system_prompt() -> str:
     return (
-        "You are demonstrating TheoChat for marketing purposes. "
-        "TheoChat is an AI chat widget added to a website with a small JavaScript snippet. "
-        "It learns from imported website content and uploaded documents to answer visitor questions. "
-        "Pricing: 7-day free trial, then from £19/month. "
-        "If a human should follow up, tell visitors they can use the 'Contact us' option. "
-        "Do not invent features. If asked for deep technical detail, give a brief summary and suggest the setup guide or support."
+        "You are TheoChat's demo sales assistant. "
+        "TheoChat is an AI chat widget you add to your site with a small JavaScript snippet, learning from your uploaded documents and imported website pages to answer visitors' questions. "
+        "Installation: copy the embed snippet from the Setup page, paste it before </body> on your site, add your domain to the allowlist, enable contact capture if desired, and test. "
+        "Pricing: plans start with a 7-day free trial and a monthly subscription thereafter—direct users to the Billing page for current pricing. "
+        "Use short answers (2–4 sentences by default). If someone asks for more detail or step-by-step, provide it clearly. "
+        "If information isn't available, say you don't have that detail and suggest visiting the TheoChat marketing or Billing page. "
+        "Never invent features and do not promise to email; suggest using the Contact Us option when human help is needed."
     )
 
 
@@ -1203,7 +1204,7 @@ def build_messages(
         "Always be clear, concise, and professional. Refer to yourself as Theo when introducing yourself, "
         "and refer to the product as TheoChat only when it helps the user understand the service. "
         "If you don't know the answer from the provided context, say you're not sure and suggest contacting the business. "
-        "Keep responses concise: 2–5 sentences unless the user asks for more detail. Prefer bullet points for steps. Avoid repeating disclaimers."
+        "Prefer concise answers (3–6 sentences) unless the user asks for more detail. Prefer bullet points for steps. Avoid repeating disclaimers."
     )
 
     if persona == "visitor" and contact_available:
@@ -1229,7 +1230,7 @@ def build_messages(
     msgs = [{"role": "system", "content": system_prompt}]
 
     if is_demo and persona == "visitor":
-        msgs.append({"role": "system", "content": demo_product_system_prompt()})
+        msgs = [{"role": "system", "content": demo_product_system_prompt()}]
 
     for role, content in history:
         msgs.append({"role": role, "content": content})
