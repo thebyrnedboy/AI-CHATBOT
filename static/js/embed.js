@@ -151,7 +151,7 @@
       panel.style.opacity = "1";
       panel.style.transform = "translateY(0)";
     });
-    hideDemoHelper(true);
+    hideDemoHelper(false);
     try {
       window.dispatchEvent(new CustomEvent("theochat:open"));
     } catch (e) {}
@@ -371,9 +371,9 @@
     demoHelper.className = "demo-widget-helper";
     demoHelper.id = "tc-demo-helper";
     demoHelper.innerHTML = `
-      <button class="demo-widget-helper__close" type="button" aria-label="Dismiss">×</button>
-      <strong>This is what the TheoChat chatbot would look like on your page.</strong>
+      <div class="demo-widget-helper__title">This is what the TheoChat chatbot would look like on your page.</div>
       <p>Try asking a question, or click Contact us.</p>
+      <button class="demo-widget-helper__close demo-widget-helper__close--center" type="button" aria-label="Dismiss">×</button>
     `;
     document.body.appendChild(demoHelper);
     const closeBtn = demoHelper.querySelector(".demo-widget-helper__close");
