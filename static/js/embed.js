@@ -143,12 +143,24 @@
   root.style.setProperty("--tc-radius-launcher", launcherRadius);
   root.style.setProperty("--tc-launcher-text", launcherText);
 
+  const launcherBottom = isDemo ? 24 : 16;
+  const launcherRight = isDemo ? 24 : 16;
+  const launcherHeight = 52; // approximate rendered height with padding/icon/label
+  const gapBetween = 12;
+  const hoverClearance = 12;
+  const panelBottomVal = launcherBottom + launcherHeight + gapBetween + hoverClearance;
+
+  root.style.setProperty("--tc-launcher-bottom", `${launcherBottom}px`);
+  root.style.setProperty("--tc-launcher-right", `${launcherRight}px`);
+  root.style.setProperty("--tc-panel-bottom", `${panelBottomVal}px`);
+  root.style.setProperty("--tc-panel-right", `${launcherRight}px`);
+
   const styleEl = document.createElement("style");
   styleEl.textContent = `
     .theochat-launcher {
       position: fixed;
-      bottom: ${isDemo ? "24px" : "16px"};
-      right: ${isDemo ? "24px" : "16px"};
+      bottom: var(--tc-launcher-bottom, ${launcherBottom}px);
+      right: var(--tc-launcher-right, ${launcherRight}px);
       z-index: 9999;
       display: inline-flex;
       align-items: center;
@@ -259,8 +271,9 @@
   const panel = document.createElement("div");
   panel.style.position = "fixed";
   panel.id = "theochat-panel";
-  panel.style.bottom = isDemo ? "70px" : "60px";
-  panel.style.right = isDemo ? "24px" : "16px";
+  // Panel styles must not share launcher radius rules.
+  panel.style.bottom = "var(--tc-panel-bottom)";
+  panel.style.right = "var(--tc-panel-right)";
   panel.style.width = "320px";
   panel.style.height = "470px";
   panel.style.background = "#fff";
