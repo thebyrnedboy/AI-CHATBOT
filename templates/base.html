@@ -1141,6 +1141,7 @@
         <a href="{{ url_for('dashboard') }}" class="tab-link{% if request.endpoint in ['dashboard'] %} tab-link-active{% endif %}">Home</a>
         <a href="{{ url_for('contact_requests') }}" class="tab-link{% if request.endpoint in ['contact_requests'] %} tab-link-active{% endif %}">Contact requests</a>
         <a href="{{ url_for('setup') }}" class="tab-link{% if request.endpoint in ['setup'] %} tab-link-active{% endif %}">Setup</a>
+        <a href="{{ url_for('helpdesk') }}" class="tab-link{% if request.endpoint in ['helpdesk'] %} tab-link-active{% endif %}">Helpdesk</a>
         <a href="{{ url_for('billing') }}" class="tab-link{% if request.endpoint in ['billing'] %} tab-link-active{% endif %}">Billing</a>
       {% else %}
         <a href="{{ url_for('index') }}" class="tab-link{% if request.endpoint in ['index', 'marketing'] %} tab-link-active{% endif %}">Home</a>

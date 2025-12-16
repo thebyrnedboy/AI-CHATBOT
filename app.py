@@ -182,6 +182,18 @@ def get_business_by_api_key(api_key: str):
     return row
 
 
+def get_user_by_id(user_id: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, email, business_id, stripe_subscription_status, plan FROM users WHERE id = ?",
+        (user_id,),
+    )
+    row = c.fetchone()
+    conn.close()
+    return row
+
+
 def get_business_for_user(user_id: int):
     conn = get_db_connection()
     c = conn.cursor()
@@ -465,6 +477,22 @@ def init_db():
         """
     )
     ensure_column(c, "contact_requests", "visitor_phone", "TEXT")
+
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS support_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            subject TEXT NOT NULL,
+            description TEXT NOT NULL,
+            chat_transcript TEXT,
+            status TEXT DEFAULT 'open',
+            admin_reply TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -1870,6 +1898,169 @@ def knowledge_delete():
 
     flash(f"Knowledge source '{filename}' deleted.", "success")
     return redirect(url_for("knowledge"))
+
+
+def _require_admin():
+    if not current_user.is_authenticated or current_user.email.lower() != ADMIN_EMAIL:
+        return False
+    return True
+
+
+@app.get("/helpdesk")
+@subscription_required
+def helpdesk():
+    user_id = int(current_user.id)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT id, subject, description, chat_transcript, status, admin_reply, created_at, updated_at
+        FROM support_tickets
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        """,
+        (user_id,),
+    )
+    tickets = c.fetchall()
+    conn.close()
+    return render_template(
+        "helpdesk.html",
+        email=current_user.email,
+        tickets=tickets,
+        api_key=None,
+    )
+
+
+@app.post("/helpdesk/chat")
+@subscription_required
+def helpdesk_chat():
+    data = request.get_json(silent=True) or {}
+    user_msg = (data.get("message") or "").strip()
+    if not user_msg:
+        return jsonify({"error": "Empty message"}), 400
+    if not client:
+        return jsonify({"error": "Support chat unavailable"}), 500
+
+    prompt = (
+        "You are TheoChat support. Provide concise, actionable answers (1-4 sentences). "
+        "TheoChat installs via an embed snippet before </body>, learns from uploaded docs and website imports, "
+        "and can capture leads via Contact Us. If you cannot fully resolve, advise opening a support ticket."
+    )
+    msgs = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": user_msg},
+    ]
+    try:
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=msgs,
+            temperature=0.2,
+        )
+        answer = resp.choices[0].message.content
+        return jsonify({"reply": answer})
+    except Exception as e:
+        return jsonify({"error": "Support chat error", "detail": str(e)}), 500
+
+
+@app.post("/helpdesk/ticket")
+@subscription_required
+def helpdesk_ticket():
+    user_id = int(current_user.id)
+    subject = (request.form.get("subject") or "").strip()
+    description = (request.form.get("description") or "").strip()
+    chat_transcript = (request.form.get("chat_transcript") or "").strip()
+    if not subject or not description:
+        flash("Subject and description are required.", "error")
+        return redirect(url_for("helpdesk"))
+    conn = get_db_connection()
+    c = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    c.execute(
+        """
+        INSERT INTO support_tickets (user_id, subject, description, chat_transcript, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'open', ?, ?)
+        """,
+        (user_id, subject, description, chat_transcript, now, now),
+    )
+    ticket_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    try:
+        admin_body = (
+            f"New support ticket #{ticket_id}\n\n"
+            f"User: {current_user.email}\n"
+            f"Subject: {subject}\n\n"
+            f"Description:\n{description}\n\n"
+            f"Chat transcript:\n{chat_transcript or '(none)'}"
+        )
+        send_email(ADMIN_EMAIL, f"TheoChat support ticket #{ticket_id}", admin_body, None)
+    except Exception:
+        pass
+    flash("Ticket created. We'll get back to you shortly.", "success")
+    return redirect(url_for("helpdesk"))
+
+
+@app.get("/admin/helpdesk")
+@login_required
+def admin_helpdesk():
+    if not _require_admin():
+        flash("Unauthorized", "error")
+        return redirect(url_for("index"))
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT t.id, t.subject, t.description, t.chat_transcript, t.status, t.admin_reply, t.created_at, t.updated_at,
+               u.email AS user_email, u.id AS user_id
+        FROM support_tickets t
+        JOIN users u ON t.user_id = u.id
+        ORDER BY t.created_at DESC
+        """
+    )
+    tickets = c.fetchall()
+    conn.close()
+    return render_template("admin_helpdesk.html", tickets=tickets)
+
+
+@app.post("/admin/helpdesk/<int:ticket_id>/reply")
+@login_required
+def admin_helpdesk_reply(ticket_id: int):
+    if not _require_admin():
+        flash("Unauthorized", "error")
+        return redirect(url_for("index"))
+    reply = (request.form.get("reply") or "").strip()
+    status = (request.form.get("status") or "answered").strip() or "answered"
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT user_id FROM support_tickets WHERE id = ?", (ticket_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        flash("Ticket not found.", "error")
+        return redirect(url_for("admin_helpdesk"))
+    user_row = get_user_by_id(int(row["user_id"]))
+    now = datetime.utcnow().isoformat()
+    c.execute(
+        """
+        UPDATE support_tickets
+        SET admin_reply = ?, status = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (reply, status, now, ticket_id),
+    )
+    conn.commit()
+    conn.close()
+    if user_row and user_row["email"]:
+        try:
+            body = (
+                f"We replied to your TheoChat support ticket #{ticket_id}:\n\n{reply or '(no message)'}\n\n"
+                "You can view updates in the helpdesk page."
+            )
+            send_email(user_row["email"], f"Update on your TheoChat support ticket #{ticket_id}", body, None)
+        except Exception:
+            pass
+    flash("Reply sent and ticket updated.", "success")
+    return redirect(url_for("admin_helpdesk"))
 
 
 @app.get("/contact_requests")

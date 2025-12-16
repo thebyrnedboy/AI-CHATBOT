@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="tc-card">
+  <h2 style="margin-top:0;">Helpdesk</h2>
+  <p class="tc-subtext" style="margin-top:0;">Chat with TheoChat support first. If you still need help, open a ticket.</p>
+
+  <div id="helpdesk-chat" class="tc-card" style="padding:1rem;border-radius:16px;border:1px solid var(--border);margin-top:0.75rem;">
+    <div id="chat-log" style="min-height:140px;max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:0.5rem;font-size:0.95rem;"></div>
+    <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.75rem;">
+      <input id="chat-input" type="text" placeholder="Ask TheoChat support..." style="flex:1;padding:0.55rem 0.75rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;" />
+      <button id="chat-send" class="tc-btn-primary" type="button" style="padding:0.55rem 1.1rem;border-radius:10px;">Send</button>
+    </div>
+    <button id="show-ticket-form" type="button" class="secondary" style="margin-top:0.75rem;padding:0.45rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:transparent;">Still need help? Create a ticket</button>
+  </div>
+
+  <form id="ticket-form" action="{{ url_for('helpdesk_ticket') }}" method="post" style="display:none;margin-top:1rem;gap:0.65rem;flex-direction:column;" class="tc-card">
+    <h3 style="margin:0;">Create support ticket</h3>
+    <label>
+      Subject
+      <input type="text" name="subject" required style="width:100%;padding:0.55rem 0.7rem;border:1px solid var(--border);border-radius:10px;font-size:0.95rem;" />
+    </label>
+    <label>
+      Description
+      <textarea name="description" rows="3" required style="width:100%;padding:0.55rem 0.7rem;border:1px solid var(--border);border-radius:10px;font-size:0.95rem;"></textarea>
+    </label>
+    <input type="hidden" name="chat_transcript" id="chat-transcript" value="">
+    <button type="submit" class="tc-btn-primary" style="width:fit-content;">Submit ticket</button>
+  </form>
+
+  {% if tickets %}
+    <div class="tc-card" style="margin-top:1rem;">
+      <h3 style="margin-top:0;">Your tickets</h3>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        {% for t in tickets %}
+          <div style="border:1px solid var(--border);border-radius:12px;padding:0.75rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+              <strong>#{{ t.id }} · {{ t.subject }}</strong>
+              <span class="pill" style="text-transform:capitalize;">{{ t.status }}</span>
+            </div>
+            <div style="font-size:0.95rem;margin-top:0.35rem;color:var(--muted);">{{ t.description }}</div>
+            {% if t.chat_transcript %}
+              <details style="margin-top:0.35rem;">
+                <summary style="cursor:pointer;">Chat transcript</summary>
+                <pre style="white-space:pre-wrap;font-size:0.85rem;margin:0.25rem 0 0;">{{ t.chat_transcript }}</pre>
+              </details>
+            {% endif %}
+            {% if t.admin_reply %}
+              <div style="margin-top:0.5rem;padding:0.6rem;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);">
+                <strong>Support reply:</strong>
+                <div style="margin-top:0.2rem;white-space:pre-wrap;">{{ t.admin_reply }}</div>
+              </div>
+            {% endif %}
+            <div style="margin-top:0.4rem;font-size:0.85rem;color:var(--muted);">Updated {{ t.updated_at }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  (function() {
+    const log = document.getElementById("chat-log");
+    const input = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("chat-send");
+    const ticketForm = document.getElementById("ticket-form");
+    const showTicket = document.getElementById("show-ticket-form");
+    const transcriptField = document.getElementById("chat-transcript");
+    const transcript = [];
+
+    function addMessage(text, role) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      div.style.padding = "0.45rem 0.55rem";
+      div.style.borderRadius = "10px";
+      div.style.maxWidth = "90%";
+      div.style.whiteSpace = "pre-wrap";
+      div.style.alignSelf = role === "user" ? "flex-end" : "flex-start";
+      div.style.background = role === "user" ? "var(--theochat-primary, #2563eb)" : "#e5e7eb";
+      div.style.color = role === "user" ? "#fff" : "#111827";
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      transcript.push((role === "user" ? "You: " : "TheoChat: ") + text);
+      transcriptField.value = transcript.join("\\n");
+    }
+
+    async function sendMessage() {
+      const text = (input.value || "").trim();
+      if (!text) return;
+      addMessage(text, "user");
+      input.value = "";
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch("{{ url_for('helpdesk_chat') }}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        if (data && data.reply) {
+          addMessage(data.reply, "bot");
+        } else if (data && data.error) {
+          addMessage("Support unavailable: " + data.error, "bot");
+        }
+      } catch (e) {
+        addMessage("Network error. Please try again or create a ticket.", "bot");
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    input.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } });
+    showTicket.addEventListener("click", () => { ticketForm.style.display = "flex"; });
+  })();
+</script>
+{% endblock %}
