@@ -28,6 +28,7 @@ from flask import (
     jsonify,
     Response,
     stream_with_context,
+    abort,
 )
 from flask_login import (
     LoginManager,
@@ -139,6 +140,7 @@ def inject_globals():
     return {
         "ADMIN_EMAIL": ADMIN_EMAIL,
         "current_business_api_key": api_key,
+        "is_admin_user": is_admin_user,
     }
 
 
@@ -1915,37 +1917,6 @@ def knowledge_delete():
 
     flash(f"Knowledge source '{filename}' deleted.", "success")
     return redirect(url_for("knowledge"))
-
-
-@app.get("/helpdesk")
-@subscription_required
-def helpdesk():
-    user_id = int(current_user.id)
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute(
-        """
-        SELECT id, subject, description, chat_transcript, status, admin_reply, created_at, updated_at
-        FROM support_tickets
-        WHERE user_id = ?
-        ORDER BY created_at DESC
-        """,
-        (user_id,),
-    )
-    tickets = c.fetchall()
-    conn.close()
-    return render_template(
-        "helpdesk.html",
-        email=current_user.email,
-        tickets=tickets,
-        api_key=None,
-    )
-
-
-def _require_admin():
-    if not current_user.is_authenticated or current_user.email.lower() != ADMIN_EMAIL:
-        return False
-    return True
 
 
 @app.get("/helpdesk")
