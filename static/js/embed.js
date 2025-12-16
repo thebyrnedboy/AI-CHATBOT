@@ -285,7 +285,8 @@
   panel.style.display = "none";
   panel.style.flexDirection = "column";
   panel.style.overflow = "hidden";
-  panel.style.fontFamily = "var(--theochat-font-family, " + DEFAULTS.font + ")";
+  const WIDGET_FONT = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Arial, sans-serif";
+  panel.style.fontFamily = isDemo ? "var(--theochat-font-family, " + DEFAULTS.font + ")" : WIDGET_FONT;
   panel.style.opacity = "0";
   panel.style.transform = "translateY(8px)";
   panel.style.transition = "opacity 0.2s ease, transform 0.2s ease";
@@ -408,18 +409,20 @@
 
   const inputRow = document.createElement("div");
   inputRow.style.display = "flex";
+  inputRow.style.alignItems = "center";
   inputRow.style.gap = "6px";
   inputRow.style.padding = "10px";
   inputRow.style.borderTop = "1px solid #e5e7eb";
   const input = document.createElement("input");
   input.type = "text";
   input.placeholder = "Ask Theo a question about this site...";
-  input.style.flex = "1";
+  input.style.flex = "1 1 auto";
+  input.style.minWidth = "0";
   input.style.fontSize = "14px";
   input.style.padding = "8px";
   input.style.border = "1px solid #d1d5db";
   input.style.borderRadius = "var(--theochat-radius, 8px)";
-  input.style.fontFamily = "var(--theochat-font-family, " + DEFAULTS.font + ")";
+  input.style.fontFamily = isDemo ? "var(--theochat-font-family, " + DEFAULTS.font + ")" : WIDGET_FONT;
   const sendBtn = document.createElement("button");
   sendBtn.textContent = "Send";
   sendBtn.style.padding = "8px 12px";
@@ -428,7 +431,10 @@
   sendBtn.style.background = "var(--theochat-primary, #2563eb)";
   sendBtn.style.color = "#fff";
   sendBtn.style.cursor = "pointer";
-  sendBtn.style.fontFamily = "var(--theochat-font-family, " + DEFAULTS.font + ")";
+  sendBtn.style.fontFamily = isDemo ? "var(--theochat-font-family, " + DEFAULTS.font + ")" : WIDGET_FONT;
+  sendBtn.style.flex = "0 0 auto";
+  sendBtn.style.whiteSpace = "nowrap";
+  sendBtn.style.minWidth = "68px";
 
   inputRow.appendChild(input);
   inputRow.appendChild(sendBtn);
