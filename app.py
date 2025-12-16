@@ -1442,6 +1442,15 @@ def validate_password_rules(password: str) -> Tuple[bool, Optional[str]]:
     """
     err = validate_password_strength(password)
     return (err is None, err)
+
+
+def build_embed_snippet(api_key: str) -> str:
+    snippet = f"""<script
+  src="https://www.theochat.co.uk/embed.js"
+  data-api-key="{api_key}"
+  async
+></script>"""
+    return snippet.strip()
 # ==========================
 # Auth routes
 # ==========================
@@ -1778,6 +1787,7 @@ def dashboard():
     imported_website_url = (
         biz["last_import_url"] if biz and "last_import_url" in biz.keys() and biz["last_import_url"] else ""
     )
+    embed_snippet = build_embed_snippet(api_key) if api_key else ""
 
     return render_template(
         "index.html",
@@ -1796,6 +1806,7 @@ def dashboard():
         subscription_info=subscription_info,
         trial_days_left=trial_days_left,
         embed_available=embed_available,
+        embed_snippet=embed_snippet,
     )
 
 
@@ -2811,6 +2822,7 @@ def setup():
     allowed_domains = biz["allowed_domains"] if biz and biz["allowed_domains"] else ""
     chunk_count = get_chunk_count(user_id, int(biz["id"])) if biz else 0
     embed_available = chunk_count > 0
+    embed_snippet = build_embed_snippet(api_key) if api_key else ""
 
     return render_template(
         "setup.html",
@@ -2821,6 +2833,7 @@ def setup():
         business_name=business_name,
         allowed_domains=allowed_domains,
         embed_available=embed_available,
+        embed_snippet=embed_snippet,
     )
 
 
