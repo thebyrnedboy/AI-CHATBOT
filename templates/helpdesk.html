@@ -39,17 +39,26 @@
               <span class="pill" style="text-transform:capitalize;">{{ t.status }}</span>
             </div>
             <div style="font-size:0.95rem;margin-top:0.35rem;color:var(--muted);">{{ t.description }}</div>
-            {% if t.chat_transcript %}
-              <details style="margin-top:0.35rem;">
-                <summary style="cursor:pointer;">Chat transcript</summary>
-                <pre style="white-space:pre-wrap;font-size:0.85rem;margin:0.25rem 0 0;">{{ t.chat_transcript }}</pre>
-              </details>
-            {% endif %}
-            {% if t.admin_reply %}
-              <div style="margin-top:0.5rem;padding:0.6rem;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);">
-                <strong>Support reply:</strong>
-                <div style="margin-top:0.2rem;white-space:pre-wrap;">{{ t.admin_reply }}</div>
+            {% set msgs = ticket_messages.get(t.id, []) %}
+            {% if msgs %}
+              <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.35rem;">
+                {% for m in msgs %}
+                  <div style="padding:0.45rem 0.55rem;border-radius:10px;background:{% if m.sender_role == 'admin' %}rgba(59,130,246,0.12){% elif m.sender_role == 'bot' %}#e5e7eb{% else %}rgba(34,197,94,0.12){% endif %};border:1px solid rgba(148,163,184,0.35);">
+                    <strong style="text-transform:capitalize;">{{ m.sender_role }}</strong>
+                    <div style="margin-top:0.15rem;white-space:pre-wrap;">{{ m.message }}</div>
+                  </div>
+                {% endfor %}
               </div>
+            {% endif %}
+            {% if t.status != 'closed' %}
+              <form action="{{ url_for('helpdesk_ticket_reply', ticket_id=t.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.35rem;">
+                <label>Reply
+                  <textarea name="message" rows="2" required style="width:100%;padding:0.5rem 0.65rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;"></textarea>
+                </label>
+                <button type="submit" class="tc-btn-primary" style="width:fit-content;">Send reply</button>
+              </form>
+            {% else %}
+              <div style="margin-top:0.35rem;font-size:0.9rem;color:var(--muted);">Ticket closed</div>
             {% endif %}
             <div style="margin-top:0.4rem;font-size:0.85rem;color:var(--muted);">Updated {{ t.updated_at }}</div>
           </div>
@@ -100,6 +109,9 @@
         const data = await res.json();
         if (data && data.reply) {
           addMessage(data.reply, "bot");
+          if (data.escalate) {
+            ticketForm.style.display = "flex";
+          }
         } else if (data && data.error) {
           addMessage("Support unavailable: " + data.error, "bot");
         }

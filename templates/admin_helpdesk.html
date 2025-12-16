@@ -40,16 +40,15 @@
             From: {{ ticket.user_email }}
           </div>
           <p style="margin:0.4rem 0;color:var(--text);white-space:pre-wrap;">{{ ticket.description }}</p>
-          {% if ticket.chat_transcript %}
-            <details style="margin:0.35rem 0;">
-              <summary style="cursor:pointer;">Chat transcript</summary>
-              <pre style="white-space:pre-wrap;font-size:0.85rem;margin:0.25rem 0 0;">{{ ticket.chat_transcript }}</pre>
-            </details>
-          {% endif %}
-          {% if ticket.admin_reply %}
-            <div style="margin-top:0.5rem;padding:0.6rem;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);">
-              <strong>Latest reply:</strong>
-              <div style="white-space:pre-wrap;margin-top:0.2rem;">{{ ticket.admin_reply }}</div>
+          {% if selected_messages %}
+            <div style="margin:0.35rem 0;display:flex;flex-direction:column;gap:0.35rem;">
+              {% for m in selected_messages %}
+                <div style="padding:0.45rem 0.55rem;border-radius:10px;background:{% if m.sender_role == 'admin' %}rgba(59,130,246,0.1){% elif m.sender_role == 'bot' %}#e5e7eb{% else %}rgba(34,197,94,0.12){% endif %};border:1px solid rgba(148,163,184,0.35);">
+                  <strong style="text-transform:capitalize;">{{ m.sender_role }}</strong>
+                  <div style="white-space:pre-wrap;margin-top:0.15rem;">{{ m.message }}</div>
+                  <div style="font-size:0.8rem;color:var(--muted);margin-top:0.1rem;">{{ m.created_at }}</div>
+                </div>
+              {% endfor %}
             </div>
           {% endif %}
           <form action="{{ url_for('admin_helpdesk_reply', ticket_id=ticket.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem;">

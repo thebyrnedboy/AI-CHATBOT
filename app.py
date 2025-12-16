@@ -495,6 +495,18 @@ def init_db():
         )
         """
     )
+
+    c.execute(
+        """
+        CREATE TABLE IF NOT EXISTS helpdesk_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            sender_role TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
     c.execute(
         """
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -1919,9 +1931,34 @@ def knowledge_delete():
     return redirect(url_for("knowledge"))
 
 
+def add_helpdesk_message(ticket_id: int, sender_role: str, message: str):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO helpdesk_messages (ticket_id, sender_role, message) VALUES (?, ?, ?)",
+        (ticket_id, sender_role, message),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_helpdesk_messages(ticket_id: int):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, sender_role, message, created_at FROM helpdesk_messages WHERE ticket_id = ? ORDER BY id ASC",
+        (ticket_id,),
+    )
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+
 @app.get("/helpdesk")
 @subscription_required
 def helpdesk():
+    if is_admin_user(current_user):
+        return redirect(url_for("admin_helpdesk"))
     user_id = int(current_user.id)
     conn = get_db_connection()
     c = conn.cursor()
@@ -1936,10 +1973,14 @@ def helpdesk():
     )
     tickets = c.fetchall()
     conn.close()
+    messages_map = {}
+    for t in tickets:
+        messages_map[t["id"]] = get_helpdesk_messages(int(t["id"]))
     return render_template(
         "helpdesk.html",
         email=current_user.email,
         tickets=tickets,
+        ticket_messages=messages_map,
         api_key=None,
     )
 
@@ -1955,9 +1996,11 @@ def helpdesk_chat():
         return jsonify({"error": "Support chat unavailable"}), 500
 
     prompt = (
-        "You are TheoChat support. Provide concise, actionable answers (1-4 sentences). "
-        "TheoChat installs via an embed snippet before </body>, learns from uploaded docs and website imports, "
-        "and can capture leads via Contact Us. If you cannot fully resolve, advise opening a support ticket."
+        "You are TheoChat support. Provide concise, actionable answers (1-4 sentences, max ~120 words). "
+        "TheoChat installs via a small embed snippet before </body>, learns from uploaded documents and website imports, "
+        "supports allowed domains and contact capture, and uses API keys to secure widgets. "
+        "If you cannot fully resolve or the user requests a human, include the token [ESCALATE] at the end of your reply. "
+        "Ask at most one clarifying question if needed. Never promise to email; instead, suggest opening a support ticket when needed."
     )
     msgs = [
         {"role": "system", "content": prompt},
@@ -1969,8 +2012,15 @@ def helpdesk_chat():
             messages=msgs,
             temperature=0.2,
         )
-        answer = resp.choices[0].message.content
-        return jsonify({"reply": answer})
+        answer = resp.choices[0].message.content or ""
+        escalate = False
+        lower_msg = user_msg.lower()
+        if any(k in lower_msg for k in ["human", "ticket", "support", "email", "contact", "escalate"]):
+            escalate = True
+        if "[escalate]" in answer.lower():
+            escalate = True
+            answer = answer.replace("[ESCALATE]", "").replace("[escalate]", "").strip()
+        return jsonify({"reply": answer, "escalate": escalate})
     except Exception as e:
         return jsonify({"error": "Support chat error", "detail": str(e)}), 500
 
@@ -1998,6 +2048,21 @@ def helpdesk_ticket():
     ticket_id = c.lastrowid
     conn.commit()
     conn.close()
+    # store transcript lines
+    for line in (chat_transcript.splitlines() if chat_transcript else []):
+        line_strip = line.strip()
+        if not line_strip:
+            continue
+        role = "user"
+        content = line_strip
+        if line_strip.lower().startswith("you:"):
+            role = "user"
+            content = line_strip[4:].strip() or line_strip
+        elif line_strip.lower().startswith("theochat:"):
+            role = "bot"
+            content = line_strip[9:].strip() or line_strip
+        add_helpdesk_message(ticket_id, role, content)
+    add_helpdesk_message(ticket_id, "user", description)
     try:
         admin_body = (
             f"New support ticket #{ticket_id}\n\n"
@@ -2010,6 +2075,45 @@ def helpdesk_ticket():
     except Exception:
         pass
     flash("Ticket created. We'll get back to you shortly.", "success")
+    return redirect(url_for("helpdesk"))
+
+
+@app.post("/helpdesk/<int:ticket_id>/reply")
+@subscription_required
+def helpdesk_ticket_reply(ticket_id: int):
+    if is_admin_user(current_user):
+        return redirect(url_for("admin_helpdesk"))
+    user_id = int(current_user.id)
+    message = (request.form.get("message") or "").strip()
+    if not message:
+        flash("Reply cannot be empty.", "error")
+        return redirect(url_for("helpdesk"))
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT user_id, status FROM support_tickets WHERE id = ?", (ticket_id,))
+    row = c.fetchone()
+    if not row or int(row["user_id"]) != user_id:
+        conn.close()
+        flash("Ticket not found.", "error")
+        return redirect(url_for("helpdesk"))
+    if row["status"] == "closed":
+        conn.close()
+        flash("Ticket is closed.", "error")
+        return redirect(url_for("helpdesk"))
+    now = datetime.utcnow().isoformat()
+    c.execute("UPDATE support_tickets SET updated_at = ? WHERE id = ?", (now, ticket_id))
+    conn.commit()
+    conn.close()
+    add_helpdesk_message(ticket_id, "user", message)
+    try:
+        admin_body = (
+            f"New reply on ticket #{ticket_id} from {current_user.email}:\n\n"
+            f"{message[:500]}"
+        )
+        send_email(ADMIN_EMAIL, f"New reply on TheoChat ticket #{ticket_id}", admin_body, None)
+    except Exception:
+        pass
+    flash("Reply sent.", "success")
     return redirect(url_for("helpdesk"))
 
 
@@ -2042,7 +2146,9 @@ def admin_helpdesk():
     )
     tickets = c.fetchall()
     conn.close()
-    return render_template("admin_helpdesk.html", tickets=tickets, selected=None, status_filter=status_filter, query=q)
+    selected = tickets[0] if tickets else None
+    selected_messages = get_helpdesk_messages(int(selected["id"])) if selected else []
+    return render_template("admin_helpdesk.html", tickets=tickets, selected=selected, selected_messages=selected_messages, status_filter=status_filter, query=q)
 
 
 @app.get("/admin/helpdesk/<int:ticket_id>")
@@ -2073,7 +2179,8 @@ def admin_helpdesk_detail(ticket_id: int):
     conn.close()
     if not ticket:
         abort(404)
-    return render_template("admin_helpdesk.html", tickets=tickets, selected=ticket, status_filter=None, query=None)
+    selected_messages = get_helpdesk_messages(int(ticket["id"]))
+    return render_template("admin_helpdesk.html", tickets=tickets, selected=ticket, selected_messages=selected_messages, status_filter=None, query=None)
 
 
 @app.post("/admin/helpdesk/<int:ticket_id>/reply")
@@ -2101,6 +2208,8 @@ def admin_helpdesk_reply(ticket_id: int):
     )
     conn.commit()
     conn.close()
+    if reply:
+        add_helpdesk_message(ticket_id, "admin", reply)
     if user_row and user_row["email"]:
         try:
             body = (
