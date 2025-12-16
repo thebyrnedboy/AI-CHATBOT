@@ -21,6 +21,7 @@
       --danger: #dc2626;
       --text: #111827;
       --muted: #6b7280;
+      --tc-code-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Cascadia Mono", "Segoe UI Mono", "Segoe UI", "Courier New", monospace;
     }
 
     /* Dark mode overrides */
@@ -312,7 +313,7 @@
       border-radius: 1rem;
       padding: 1rem;
       margin-top: 0.5rem;
-      font-family: Consolas, "Courier New", monospace;
+      font-family: var(--tc-code-font) !important;
       font-size: 0.95rem;
       overflow-x: auto;
       border: 1px solid rgba(148, 163, 184, 0.35);
@@ -339,7 +340,7 @@
 
     .tc-code-block code,
     .tc-code-box code {
-      font-family: "Consolas", "Courier New", monospace !important;
+      font-family: var(--tc-code-font) !important;
       font-size: 14px !important;
       text-shadow: none !important;
       color: inherit;
@@ -347,6 +348,11 @@
       display: block;
       line-height: 1.5;
       white-space: pre;
+    }
+
+    .tc-code-block *,
+    .tc-code-box * {
+      font-family: var(--tc-code-font) !important;
     }
 
     .tc-rule-valid {
