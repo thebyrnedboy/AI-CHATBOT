@@ -2,47 +2,72 @@
 
 {% block content %}
 <div class="tc-card">
-  <h2 style="margin-top:0;">Support tickets</h2>
+  <h2 style="margin-top:0;">Admin Helpdesk</h2>
+  <form method="get" action="{{ url_for('admin_helpdesk') }}" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+    <select name="status" style="padding:0.4rem 0.6rem;border-radius:10px;border:1px solid var(--border);">
+      <option value="">All statuses</option>
+      <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+      <option value="answered" {% if status_filter == 'answered' %}selected{% endif %}>Answered</option>
+      <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+    </select>
+    <input type="text" name="q" placeholder="Search subject or email" value="{{ query or '' }}" style="flex:1;min-width:220px;padding:0.45rem 0.6rem;border:1px solid var(--border);border-radius:10px;" />
+    <button type="submit" class="tc-btn-primary" style="padding:0.45rem 0.9rem;border-radius:10px;">Filter</button>
+  </form>
+
   {% if tickets %}
-    <div style="display:flex;flex-direction:column;gap:0.75rem;">
-      {% for t in tickets %}
+    <div style="display:grid;grid-template-columns:320px 1fr;gap:1rem;align-items:start;">
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        {% for t in tickets %}
+          <a href="{{ url_for('admin_helpdesk_detail', ticket_id=t.id) }}" style="display:flex;flex-direction:column;gap:0.25rem;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;background:{% if selected and selected.id == t.id %}rgba(59,130,246,0.08){% else %}transparent{% endif %};">
+            <div style="display:flex;justify-content:space-between;gap:0.35rem;align-items:center;">
+              <strong style="font-size:0.95rem;">#{{ t.id }} · {{ t.subject }}</strong>
+              <span class="pill" style="text-transform:capitalize;">{{ t.status }}</span>
+            </div>
+            <div style="font-size:0.9rem;color:var(--muted);">{{ t.user_email }}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">Updated {{ t.updated_at }}</div>
+          </a>
+        {% endfor %}
+      </div>
+
+      {% set ticket = selected if selected else (tickets[0] if tickets else None) %}
+      {% if ticket %}
         <div style="border:1px solid var(--border);border-radius:12px;padding:0.85rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
-            <strong>#{{ t.id }} · {{ t.subject }}</strong>
-            <span class="pill" style="text-transform:capitalize;">{{ t.status }}</span>
+            <strong>#{{ ticket.id }} · {{ ticket.subject }}</strong>
+            <span class="pill" style="text-transform:capitalize;">{{ ticket.status }}</span>
           </div>
           <div style="font-size:0.95rem;margin-top:0.25rem;color:var(--muted);">
-            From: {{ t.user_email }}
+            From: {{ ticket.user_email }}
           </div>
-          <p style="margin:0.4rem 0;color:var(--text);white-space:pre-wrap;">{{ t.description }}</p>
-          {% if t.chat_transcript %}
+          <p style="margin:0.4rem 0;color:var(--text);white-space:pre-wrap;">{{ ticket.description }}</p>
+          {% if ticket.chat_transcript %}
             <details style="margin:0.35rem 0;">
               <summary style="cursor:pointer;">Chat transcript</summary>
-              <pre style="white-space:pre-wrap;font-size:0.85rem;margin:0.25rem 0 0;">{{ t.chat_transcript }}</pre>
+              <pre style="white-space:pre-wrap;font-size:0.85rem;margin:0.25rem 0 0;">{{ ticket.chat_transcript }}</pre>
             </details>
           {% endif %}
-          {% if t.admin_reply %}
+          {% if ticket.admin_reply %}
             <div style="margin-top:0.5rem;padding:0.6rem;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);">
               <strong>Latest reply:</strong>
-              <div style="white-space:pre-wrap;margin-top:0.2rem;">{{ t.admin_reply }}</div>
+              <div style="white-space:pre-wrap;margin-top:0.2rem;">{{ ticket.admin_reply }}</div>
             </div>
           {% endif %}
-          <form action="{{ url_for('admin_helpdesk_reply', ticket_id=t.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem;">
+          <form action="{{ url_for('admin_helpdesk_reply', ticket_id=ticket.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem;">
             <label>Reply
-              <textarea name="reply" rows="3" style="width:100%;padding:0.5rem 0.65rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;">{{ t.admin_reply or '' }}</textarea>
+              <textarea name="reply" rows="3" style="width:100%;padding:0.5rem 0.65rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;">{{ ticket.admin_reply or '' }}</textarea>
             </label>
             <label>Status
               <select name="status" style="padding:0.4rem 0.6rem;border-radius:10px;border:1px solid var(--border);">
-                <option value="open" {% if t.status == 'open' %}selected{% endif %}>Open</option>
-                <option value="answered" {% if t.status == 'answered' %}selected{% endif %}>Answered</option>
-                <option value="closed" {% if t.status == 'closed' %}selected{% endif %}>Closed</option>
+                <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+                <option value="answered" {% if ticket.status == 'answered' %}selected{% endif %}>Answered</option>
+                <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Closed</option>
               </select>
             </label>
             <button type="submit" class="tc-btn-primary" style="width:fit-content;">Send reply</button>
           </form>
-          <div style="margin-top:0.35rem;font-size:0.85rem;color:var(--muted);">Updated {{ t.updated_at }}</div>
+          <div style="margin-top:0.35rem;font-size:0.85rem;color:var(--muted);">Updated {{ ticket.updated_at }}</div>
         </div>
-      {% endfor %}
+      {% endif %}
     </div>
   {% else %}
     <p class="tc-subtext">No support tickets yet.</p>

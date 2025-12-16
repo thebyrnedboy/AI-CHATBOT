@@ -1479,6 +1479,23 @@ def build_embed_snippet(api_key: str) -> str:
   async
 ></script>"""
     return snippet.strip()
+
+
+def is_admin_user(user: User | None) -> bool:
+    if not user or not getattr(user, "email", None):
+        return False
+    return user.email.lower() == ADMIN_EMAIL
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    @login_required
+    def wrapper(*args, **kwargs):
+        if not is_admin_user(current_user):
+            abort(403)
+        return view_func(*args, **kwargs)
+
+    return wrapper
 # ==========================
 # Auth routes
 # ==========================
@@ -1900,6 +1917,31 @@ def knowledge_delete():
     return redirect(url_for("knowledge"))
 
 
+@app.get("/helpdesk")
+@subscription_required
+def helpdesk():
+    user_id = int(current_user.id)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT id, subject, description, chat_transcript, status, admin_reply, created_at, updated_at
+        FROM support_tickets
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        """,
+        (user_id,),
+    )
+    tickets = c.fetchall()
+    conn.close()
+    return render_template(
+        "helpdesk.html",
+        email=current_user.email,
+        tickets=tickets,
+        api_key=None,
+    )
+
+
 def _require_admin():
     if not current_user.is_authenticated or current_user.email.lower() != ADMIN_EMAIL:
         return False
@@ -2001,11 +2043,40 @@ def helpdesk_ticket():
 
 
 @app.get("/admin/helpdesk")
-@login_required
+@admin_required
 def admin_helpdesk():
-    if not _require_admin():
-        flash("Unauthorized", "error")
-        return redirect(url_for("index"))
+    status_filter = (request.args.get("status") or "").strip().lower()
+    q = (request.args.get("q") or "").strip()
+    params = []
+    where = []
+    if status_filter:
+        where.append("t.status = ?")
+        params.append(status_filter)
+    if q:
+        where.append("(t.subject LIKE ? OR u.email LIKE ?)")
+        params.extend([f"%{q}%", f"%{q}%"])
+    where_clause = "WHERE " + " AND ".join(where) if where else ""
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        f"""
+        SELECT t.id, t.subject, t.description, t.chat_transcript, t.status, t.admin_reply, t.created_at, t.updated_at,
+               u.email AS user_email, u.id AS user_id
+        FROM support_tickets t
+        JOIN users u ON t.user_id = u.id
+        {where_clause}
+        ORDER BY t.created_at DESC
+        """,
+        params,
+    )
+    tickets = c.fetchall()
+    conn.close()
+    return render_template("admin_helpdesk.html", tickets=tickets, selected=None, status_filter=status_filter, query=q)
+
+
+@app.get("/admin/helpdesk/<int:ticket_id>")
+@admin_required
+def admin_helpdesk_detail(ticket_id: int):
     conn = get_db_connection()
     c = conn.cursor()
     c.execute(
@@ -2014,20 +2085,29 @@ def admin_helpdesk():
                u.email AS user_email, u.id AS user_id
         FROM support_tickets t
         JOIN users u ON t.user_id = u.id
+        WHERE t.id = ?
+        """,
+        (ticket_id,),
+    )
+    ticket = c.fetchone()
+    c.execute(
+        """
+        SELECT t.id, t.subject, t.status, t.updated_at, u.email AS user_email
+        FROM support_tickets t
+        JOIN users u ON t.user_id = u.id
         ORDER BY t.created_at DESC
         """
     )
     tickets = c.fetchall()
     conn.close()
-    return render_template("admin_helpdesk.html", tickets=tickets)
+    if not ticket:
+        abort(404)
+    return render_template("admin_helpdesk.html", tickets=tickets, selected=ticket, status_filter=None, query=None)
 
 
 @app.post("/admin/helpdesk/<int:ticket_id>/reply")
-@login_required
+@admin_required
 def admin_helpdesk_reply(ticket_id: int):
-    if not _require_admin():
-        flash("Unauthorized", "error")
-        return redirect(url_for("index"))
     reply = (request.form.get("reply") or "").strip()
     status = (request.form.get("status") or "answered").strip() or "answered"
     conn = get_db_connection()
