@@ -14,7 +14,7 @@
     <button id="show-ticket-form" type="button" class="secondary" style="margin-top:0.75rem;padding:0.45rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:transparent;">Still need help? Create a ticket</button>
   </div>
 
-  <form id="ticket-form" action="{{ url_for('helpdesk_ticket') }}" method="post" style="display:none;margin-top:1rem;gap:0.65rem;flex-direction:column;" class="tc-card">
+  <form id="ticket-form" action="{{ url_for('helpdesk_user_ticket') }}" method="post" style="display:none;margin-top:1rem;gap:0.65rem;flex-direction:column;" class="tc-card">
     <h3 style="margin:0;">Create support ticket</h3>
     <label>
       Subject
@@ -51,7 +51,7 @@
               </div>
             {% endif %}
             {% if t.status != 'closed' %}
-              <form action="{{ url_for('helpdesk_ticket_reply', ticket_id=t.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.35rem;">
+              <form action="{{ url_for('helpdesk_user_ticket_reply', ticket_id=t.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.35rem;">
                 <label>Reply
                   <textarea name="message" rows="2" required style="width:100%;padding:0.5rem 0.65rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;"></textarea>
                 </label>
@@ -101,7 +101,7 @@
       input.value = "";
       sendBtn.disabled = true;
       try {
-        const res = await fetch("{{ url_for('helpdesk_chat') }}", {
+        const res = await fetch("{{ url_for('helpdesk_user_chat') }}", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text })

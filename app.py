@@ -1954,11 +1954,11 @@ def get_helpdesk_messages(ticket_id: int):
     return rows
 
 
-@app.get("/helpdesk")
+@app.get("/helpdesk", endpoint="helpdesk_user_index")
 @subscription_required
 def helpdesk():
     if is_admin_user(current_user):
-        return redirect(url_for("admin_helpdesk"))
+        return redirect(url_for("helpdesk_admin_index"))
     user_id = int(current_user.id)
     conn = get_db_connection()
     c = conn.cursor()
@@ -1985,7 +1985,7 @@ def helpdesk():
     )
 
 
-@app.post("/helpdesk/chat")
+@app.post("/helpdesk/chat", endpoint="helpdesk_user_chat")
 @subscription_required
 def helpdesk_chat():
     data = request.get_json(silent=True) or {}
@@ -2025,7 +2025,7 @@ def helpdesk_chat():
         return jsonify({"error": "Support chat error", "detail": str(e)}), 500
 
 
-@app.post("/helpdesk/ticket")
+@app.post("/helpdesk/ticket", endpoint="helpdesk_user_ticket")
 @subscription_required
 def helpdesk_ticket():
     user_id = int(current_user.id)
@@ -2034,7 +2034,7 @@ def helpdesk_ticket():
     chat_transcript = (request.form.get("chat_transcript") or "").strip()
     if not subject or not description:
         flash("Subject and description are required.", "error")
-        return redirect(url_for("helpdesk"))
+        return redirect(url_for("helpdesk_user_index"))
     conn = get_db_connection()
     c = conn.cursor()
     now = datetime.utcnow().isoformat()
@@ -2075,19 +2075,19 @@ def helpdesk_ticket():
     except Exception:
         pass
     flash("Ticket created. We'll get back to you shortly.", "success")
-    return redirect(url_for("helpdesk"))
+    return redirect(url_for("helpdesk_user_index"))
 
 
-@app.post("/helpdesk/<int:ticket_id>/reply")
+@app.post("/helpdesk/<int:ticket_id>/reply", endpoint="helpdesk_user_ticket_reply")
 @subscription_required
 def helpdesk_ticket_reply(ticket_id: int):
     if is_admin_user(current_user):
-        return redirect(url_for("admin_helpdesk"))
+        return redirect(url_for("helpdesk_admin_index"))
     user_id = int(current_user.id)
     message = (request.form.get("message") or "").strip()
     if not message:
         flash("Reply cannot be empty.", "error")
-        return redirect(url_for("helpdesk"))
+        return redirect(url_for("helpdesk_user_index"))
     conn = get_db_connection()
     c = conn.cursor()
     c.execute("SELECT user_id, status FROM support_tickets WHERE id = ?", (ticket_id,))
@@ -2095,11 +2095,11 @@ def helpdesk_ticket_reply(ticket_id: int):
     if not row or int(row["user_id"]) != user_id:
         conn.close()
         flash("Ticket not found.", "error")
-        return redirect(url_for("helpdesk"))
+        return redirect(url_for("helpdesk_user_index"))
     if row["status"] == "closed":
         conn.close()
         flash("Ticket is closed.", "error")
-        return redirect(url_for("helpdesk"))
+        return redirect(url_for("helpdesk_user_index"))
     now = datetime.utcnow().isoformat()
     c.execute("UPDATE support_tickets SET updated_at = ? WHERE id = ?", (now, ticket_id))
     conn.commit()
@@ -2114,10 +2114,10 @@ def helpdesk_ticket_reply(ticket_id: int):
     except Exception:
         pass
     flash("Reply sent.", "success")
-    return redirect(url_for("helpdesk"))
+    return redirect(url_for("helpdesk_user_index"))
 
 
-@app.get("/admin/helpdesk")
+@app.get("/admin/helpdesk", endpoint="helpdesk_admin_index")
 @admin_required
 def admin_helpdesk():
     status_filter = (request.args.get("status") or "").strip().lower()
@@ -2151,7 +2151,7 @@ def admin_helpdesk():
     return render_template("admin_helpdesk.html", tickets=tickets, selected=selected, selected_messages=selected_messages, status_filter=status_filter, query=q)
 
 
-@app.get("/admin/helpdesk/<int:ticket_id>")
+@app.get("/admin/helpdesk/<int:ticket_id>", endpoint="helpdesk_admin_detail")
 @admin_required
 def admin_helpdesk_detail(ticket_id: int):
     conn = get_db_connection()
@@ -2183,7 +2183,7 @@ def admin_helpdesk_detail(ticket_id: int):
     return render_template("admin_helpdesk.html", tickets=tickets, selected=ticket, selected_messages=selected_messages, status_filter=None, query=None)
 
 
-@app.post("/admin/helpdesk/<int:ticket_id>/reply")
+@app.post("/admin/helpdesk/<int:ticket_id>/reply", endpoint="helpdesk_admin_reply")
 @admin_required
 def admin_helpdesk_reply(ticket_id: int):
     reply = (request.form.get("reply") or "").strip()
@@ -2195,7 +2195,7 @@ def admin_helpdesk_reply(ticket_id: int):
     if not row:
         conn.close()
         flash("Ticket not found.", "error")
-        return redirect(url_for("admin_helpdesk"))
+        return redirect(url_for("helpdesk_admin_index"))
     user_row = get_user_by_id(int(row["user_id"]))
     now = datetime.utcnow().isoformat()
     c.execute(
@@ -2220,7 +2220,7 @@ def admin_helpdesk_reply(ticket_id: int):
         except Exception:
             pass
     flash("Reply sent and ticket updated.", "success")
-    return redirect(url_for("admin_helpdesk"))
+    return redirect(url_for("helpdesk_admin_index"))
 
 
 @app.get("/contact_requests")

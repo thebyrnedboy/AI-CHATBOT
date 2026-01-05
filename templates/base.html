@@ -1142,9 +1142,9 @@
         <a href="{{ url_for('contact_requests') }}" class="tab-link{% if request.endpoint in ['contact_requests'] %} tab-link-active{% endif %}">Contact requests</a>
         <a href="{{ url_for('setup') }}" class="tab-link{% if request.endpoint in ['setup'] %} tab-link-active{% endif %}">Setup</a>
         {% if is_admin_user(current_user) %}
-          <a href="{{ url_for('admin_helpdesk') }}" class="tab-link{% if request.endpoint in ['admin_helpdesk', 'admin_helpdesk_detail'] %} tab-link-active{% endif %}">Admin Helpdesk</a>
+          <a href="{{ url_for('helpdesk_admin_index') }}" class="tab-link{% if request.endpoint in ['helpdesk_admin_index', 'helpdesk_admin_detail'] %} tab-link-active{% endif %}">Admin Helpdesk</a>
         {% else %}
-          <a href="{{ url_for('helpdesk') }}" class="tab-link{% if request.endpoint in ['helpdesk'] %} tab-link-active{% endif %}">Helpdesk</a>
+          <a href="{{ url_for('helpdesk_user_index') }}" class="tab-link{% if request.endpoint in ['helpdesk_user_index'] %} tab-link-active{% endif %}">Helpdesk</a>
         {% endif %}
         <a href="{{ url_for('billing') }}" class="tab-link{% if request.endpoint in ['billing'] %} tab-link-active{% endif %}">Billing</a>
       {% else %}

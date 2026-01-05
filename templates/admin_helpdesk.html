@@ -3,7 +3,7 @@
 {% block content %}
 <div class="tc-card">
   <h2 style="margin-top:0;">Admin Helpdesk</h2>
-  <form method="get" action="{{ url_for('admin_helpdesk') }}" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+  <form method="get" action="{{ url_for('helpdesk_admin_index') }}" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
     <select name="status" style="padding:0.4rem 0.6rem;border-radius:10px;border:1px solid var(--border);">
       <option value="">All statuses</option>
       <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
@@ -18,7 +18,7 @@
     <div style="display:grid;grid-template-columns:320px 1fr;gap:1rem;align-items:start;">
       <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;">
         {% for t in tickets %}
-          <a href="{{ url_for('admin_helpdesk_detail', ticket_id=t.id) }}" style="display:flex;flex-direction:column;gap:0.25rem;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;background:{% if selected and selected.id == t.id %}rgba(59,130,246,0.08){% else %}transparent{% endif %};">
+          <a href="{{ url_for('helpdesk_admin_detail', ticket_id=t.id) }}" style="display:flex;flex-direction:column;gap:0.25rem;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border);text-decoration:none;color:inherit;background:{% if selected and selected.id == t.id %}rgba(59,130,246,0.08){% else %}transparent{% endif %};">
             <div style="display:flex;justify-content:space-between;gap:0.35rem;align-items:center;">
               <strong style="font-size:0.95rem;">#{{ t.id }} · {{ t.subject }}</strong>
               <span class="pill" style="text-transform:capitalize;">{{ t.status }}</span>
@@ -51,7 +51,7 @@
               {% endfor %}
             </div>
           {% endif %}
-          <form action="{{ url_for('admin_helpdesk_reply', ticket_id=ticket.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem;">
+          <form action="{{ url_for('helpdesk_admin_reply', ticket_id=ticket.id) }}" method="post" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.4rem;">
             <label>Reply
               <textarea name="reply" rows="3" style="width:100%;padding:0.5rem 0.65rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;">{{ ticket.admin_reply or '' }}</textarea>
             </label>
