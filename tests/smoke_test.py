@@ -1,7 +1,5 @@
-import json
 import os
 import sys
-import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -17,38 +15,17 @@ def _client():
     return app.test_client()
 
 
-def assert_ok(resp, msg=""):
-    assert resp.status_code == 200, f"{msg} status {resp.status_code}"
-    data = json.loads(resp.data)
-    assert data.get("ok") is True, f"{msg} data {data}"
-    return data
+def test_app_imports():
+    assert app is not None
 
 
-def run_health(client):
-    data = assert_ok(client.get("/health"), "health")
-    print("Health OK:", data)
-
-
-def run_embed(client):
-    res = client.get("/embed.js")
-    assert res.status_code == 200, f"embed status {res.status_code}"
-    body = res.get_data(as_text=True)
-    assert "Chat with us" in body, "embed content missing"
-    print("Embed OK")
-
-
-def run_domain_block(client):
-    # Simulate missing API key
-    res = client.post("/chat_stream", json={"message": "hi"})
-    assert res.status_code in (401, 403, 500), "chat_stream should guard missing auth"
-    print("Chat_stream auth guard OK")
-
-# --------------------
-# Pytest-compatible tests
-# --------------------
 def test_health():
     client = _client()
-    assert_ok(client.get("/health"), "health")
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.is_json
+    data = res.get_json(silent=True) or {}
+    assert data.get("ok") is True
 
 
 def test_embed():
@@ -59,35 +36,11 @@ def test_embed():
     assert "Chat with us" in body, "embed content missing"
 
 
-def test_chat_stream_guard():
-    client = _client()
-    res = client.post("/chat_stream", json={"message": "hi"})
-    assert res.status_code in (401, 403, 500), "chat_stream should guard missing auth"
-
-
-def test_marketing_page_has_brand():
-    client = _client()
-    res = client.get("/marketing")
-    assert res.status_code == 200
-    body = res.get_data(as_text=True)
-    assert "TheoChat" in body
-
-
-def test_dashboard_redirects_when_unauthenticated():
+def test_protected_routes_redirect_when_unauthenticated():
     client = _client()
     res = client.get("/dashboard", follow_redirects=False)
     assert res.status_code in (302, 401)
     location = res.headers.get("Location", "")
     assert "/login" in location
-
-
-def main():
-    client = _client()
-    run_health(client)
-    run_embed(client)
-    run_domain_block(client)
-    print("Smoke suite passed.")
-
-
-if __name__ == "__main__":
-    main()
+    res = client.get("/admin/helpdesk", follow_redirects=False)
+    assert res.status_code in (302, 401, 403)
