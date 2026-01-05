@@ -156,9 +156,10 @@
   root.style.setProperty("--tc-panel-bottom", `${panelBottomVal}px`);
   root.style.setProperty("--tc-panel-right", `${launcherRight}px`);
 
-  const EFFECTIVE_FONT = isDemo
-    ? "var(--theochat-font-family, " + DEFAULTS.font + ")"
-    : "var(--tc-font, " + DEFAULTS.font + ")";
+  const WIDGET_FONT = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Arial, sans-serif";
+  const DEMO_WIDGET_FONT = "var(--theochat-font-family, " + DEFAULTS.font + ")";
+  const launcherFontVar = isDemo ? DEMO_WIDGET_FONT : WIDGET_FONT;
+  root.style.setProperty("--tc-widget-font", launcherFontVar);
   const styleEl = document.createElement("style");
   styleEl.textContent = `
     .theochat-launcher {
@@ -174,7 +175,7 @@
       border-radius: var(--tc-radius-launcher, 999px);
       background: linear-gradient(135deg, var(--tc-primary, #0f766e), var(--tc-secondary, #22c55e));
       color: var(--tc-launcher-text, #f8fafc);
-      font-family: var(--tc-font, ${DEFAULTS.font});
+      font-family: var(--tc-widget-font, ${DEFAULTS.font});
       font-weight: 600;
       font-size: 14px;
       box-shadow: 0 10px 24px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.14);
@@ -289,7 +290,7 @@
   panel.style.display = "none";
   panel.style.flexDirection = "column";
   panel.style.overflow = "hidden";
-  panel.style.fontFamily = EFFECTIVE_FONT;
+  panel.style.fontFamily = isDemo ? DEMO_WIDGET_FONT : WIDGET_FONT;
   panel.style.opacity = "0";
   panel.style.transform = "translateY(8px)";
   panel.style.transition = "opacity 0.2s ease, transform 0.2s ease";
@@ -425,7 +426,7 @@
   input.style.padding = "8px";
   input.style.border = "1px solid #d1d5db";
   input.style.borderRadius = "var(--theochat-radius, 8px)";
-  input.style.fontFamily = EFFECTIVE_FONT;
+  input.style.fontFamily = isDemo ? DEMO_WIDGET_FONT : WIDGET_FONT;
   const sendBtn = document.createElement("button");
   sendBtn.textContent = "Send";
   sendBtn.style.padding = "8px 12px";
@@ -434,7 +435,7 @@
   sendBtn.style.background = "var(--theochat-primary, #2563eb)";
   sendBtn.style.color = "#fff";
   sendBtn.style.cursor = "pointer";
-  sendBtn.style.fontFamily = EFFECTIVE_FONT;
+  sendBtn.style.fontFamily = isDemo ? DEMO_WIDGET_FONT : WIDGET_FONT;
   sendBtn.style.flex = "0 0 auto";
   sendBtn.style.whiteSpace = "nowrap";
   sendBtn.style.minWidth = "68px";
