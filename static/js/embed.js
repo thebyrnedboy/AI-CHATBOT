@@ -61,10 +61,11 @@
     const res = await fetch(CONFIG_URL);
     if (res.ok) {
       const data = await res.json();
+      const fontCandidate = (data.theme_font_family || "").trim();
       theme = {
         primary: data.theme_primary_color || DEFAULTS.primary,
         secondary: data.theme_secondary_color || DEFAULTS.secondary,
-        font: data.theme_font_family || DEFAULTS.font,
+        font: fontCandidate || DEFAULTS.font,
         radius: data.theme_border_radius || DEFAULTS.radius,
       };
     } else {
@@ -155,6 +156,9 @@
   root.style.setProperty("--tc-panel-bottom", `${panelBottomVal}px`);
   root.style.setProperty("--tc-panel-right", `${launcherRight}px`);
 
+  const EFFECTIVE_FONT = isDemo
+    ? "var(--theochat-font-family, " + DEFAULTS.font + ")"
+    : "var(--tc-font, " + DEFAULTS.font + ")";
   const styleEl = document.createElement("style");
   styleEl.textContent = `
     .theochat-launcher {
@@ -285,8 +289,7 @@
   panel.style.display = "none";
   panel.style.flexDirection = "column";
   panel.style.overflow = "hidden";
-  const WIDGET_FONT = "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, Arial, sans-serif";
-  panel.style.fontFamily = isDemo ? "var(--theochat-font-family, " + DEFAULTS.font + ")" : WIDGET_FONT;
+  panel.style.fontFamily = EFFECTIVE_FONT;
   panel.style.opacity = "0";
   panel.style.transform = "translateY(8px)";
   panel.style.transition = "opacity 0.2s ease, transform 0.2s ease";
@@ -422,7 +425,7 @@
   input.style.padding = "8px";
   input.style.border = "1px solid #d1d5db";
   input.style.borderRadius = "var(--theochat-radius, 8px)";
-  input.style.fontFamily = isDemo ? "var(--theochat-font-family, " + DEFAULTS.font + ")" : WIDGET_FONT;
+  input.style.fontFamily = EFFECTIVE_FONT;
   const sendBtn = document.createElement("button");
   sendBtn.textContent = "Send";
   sendBtn.style.padding = "8px 12px";
@@ -431,7 +434,7 @@
   sendBtn.style.background = "var(--theochat-primary, #2563eb)";
   sendBtn.style.color = "#fff";
   sendBtn.style.cursor = "pointer";
-  sendBtn.style.fontFamily = isDemo ? "var(--theochat-font-family, " + DEFAULTS.font + ")" : WIDGET_FONT;
+  sendBtn.style.fontFamily = EFFECTIVE_FONT;
   sendBtn.style.flex = "0 0 auto";
   sendBtn.style.whiteSpace = "nowrap";
   sendBtn.style.minWidth = "68px";
