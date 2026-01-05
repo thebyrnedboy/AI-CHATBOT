@@ -1985,6 +1985,36 @@ def helpdesk():
     )
 
 
+@app.get("/helpdesk/<int:ticket_id>", endpoint="helpdesk_user_detail")
+@subscription_required
+def helpdesk_ticket_detail(ticket_id: int):
+    if is_admin_user(current_user):
+        return redirect(url_for("helpdesk_admin_detail", ticket_id=ticket_id))
+    user_id = int(current_user.id)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute(
+        """
+        SELECT id, subject, description, chat_transcript, status, admin_reply, created_at, updated_at
+        FROM support_tickets
+        WHERE id = ? AND user_id = ?
+        """,
+        (ticket_id, user_id),
+    )
+    ticket = c.fetchone()
+    conn.close()
+    if not ticket:
+        abort(404)
+    messages = get_helpdesk_messages(ticket_id)
+    return render_template(
+        "helpdesk_ticket_detail.html",
+        email=current_user.email,
+        ticket=ticket,
+        messages=messages,
+        api_key=None,
+    )
+
+
 @app.post("/helpdesk/chat", endpoint="helpdesk_user_chat")
 @subscription_required
 def helpdesk_chat():
@@ -2064,12 +2094,14 @@ def helpdesk_ticket():
         add_helpdesk_message(ticket_id, role, content)
     add_helpdesk_message(ticket_id, "user", description)
     try:
+        admin_url = url_for("helpdesk_admin_detail", ticket_id=ticket_id, _external=True)
         admin_body = (
             f"New support ticket #{ticket_id}\n\n"
             f"User: {current_user.email}\n"
             f"Subject: {subject}\n\n"
             f"Description:\n{description}\n\n"
-            f"Chat transcript:\n{chat_transcript or '(none)'}"
+            f"Chat transcript:\n{chat_transcript or '(none)'}\n\n"
+            f"Admin view: {admin_url}"
         )
         send_email(ADMIN_EMAIL, f"TheoChat support ticket #{ticket_id}", admin_body, None)
     except Exception:
@@ -2106,9 +2138,11 @@ def helpdesk_ticket_reply(ticket_id: int):
     conn.close()
     add_helpdesk_message(ticket_id, "user", message)
     try:
+        admin_url = url_for("helpdesk_admin_detail", ticket_id=ticket_id, _external=True)
         admin_body = (
             f"New reply on ticket #{ticket_id} from {current_user.email}:\n\n"
-            f"{message[:500]}"
+            f"{message[:500]}\n\n"
+            f"Admin view: {admin_url}"
         )
         send_email(ADMIN_EMAIL, f"New reply on TheoChat ticket #{ticket_id}", admin_body, None)
     except Exception:
@@ -2212,9 +2246,10 @@ def admin_helpdesk_reply(ticket_id: int):
         add_helpdesk_message(ticket_id, "admin", reply)
     if user_row and user_row["email"]:
         try:
+            user_url = url_for("helpdesk_user_detail", ticket_id=ticket_id, _external=True)
             body = (
                 f"We replied to your TheoChat support ticket #{ticket_id}:\n\n{reply or '(no message)'}\n\n"
-                "You can view updates in the helpdesk page."
+                f"View your ticket: {user_url}"
             )
             send_email(user_row["email"], f"Update on your TheoChat support ticket #{ticket_id}", body, None)
         except Exception:

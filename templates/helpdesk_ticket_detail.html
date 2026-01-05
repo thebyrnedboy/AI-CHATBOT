@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="tc-card">
+  <a href="{{ url_for('helpdesk_user_index') }}" class="tc-link-secondary">← Back to Helpdesk</a>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+    <h2 style="margin:0;">Ticket #{{ ticket.id }} · {{ ticket.subject }}</h2>
+    <span class="pill" style="text-transform:capitalize;">{{ ticket.status }}</span>
+  </div>
+  <div style="margin-top:0.35rem;font-size:0.9rem;color:var(--muted);">
+    Updated {{ ticket.updated_at }}
+  </div>
+  <div style="margin-top:0.65rem;font-size:0.95rem;white-space:pre-wrap;overflow-wrap:anywhere;">
+    {{ ticket.description }}
+  </div>
+
+  <div style="margin-top:0.9rem;display:flex;flex-direction:column;gap:0.45rem;">
+    {% if messages %}
+      {% for m in messages %}
+        <div style="padding:0.55rem 0.65rem;border-radius:10px;background:{% if m.sender_role == 'admin' %}rgba(59,130,246,0.12){% elif m.sender_role == 'bot' %}#e5e7eb{% else %}rgba(34,197,94,0.12){% endif %};border:1px solid rgba(148,163,184,0.35);">
+          <strong style="text-transform:capitalize;">{{ m.sender_role }}</strong>
+          <div style="margin-top:0.15rem;white-space:pre-wrap;overflow-wrap:anywhere;">{{ m.message }}</div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:0.9rem;color:var(--muted);">No messages yet.</div>
+    {% endif %}
+  </div>
+
+  {% if ticket.status != 'closed' %}
+    <form action="{{ url_for('helpdesk_user_ticket_reply', ticket_id=ticket.id) }}" method="post" style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.35rem;">
+      <label>Reply
+        <textarea name="message" rows="3" required style="width:100%;padding:0.6rem 0.7rem;border-radius:10px;border:1px solid var(--border);font-size:0.95rem;"></textarea>
+      </label>
+      <button type="submit" class="tc-btn-primary" style="width:fit-content;">Send reply</button>
+    </form>
+  {% else %}
+    <div style="margin-top:0.75rem;font-size:0.9rem;color:var(--muted);">Ticket closed</div>
+  {% endif %}
+</div>
+{% endblock %}

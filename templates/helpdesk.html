@@ -35,8 +35,11 @@
         {% for t in tickets %}
           <div style="border:1px solid var(--border);border-radius:12px;padding:0.75rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
-              <strong>#{{ t.id }} · {{ t.subject }}</strong>
+              <strong><a href="{{ url_for('helpdesk_user_detail', ticket_id=t.id) }}" style="color:inherit;text-decoration:none;">#{{ t.id }} · {{ t.subject }}</a></strong>
               <span class="pill" style="text-transform:capitalize;">{{ t.status }}</span>
+            </div>
+            <div style="margin-top:0.25rem;font-size:0.85rem;">
+              <a href="{{ url_for('helpdesk_user_detail', ticket_id=t.id) }}" class="tc-link-secondary">View ticket</a>
             </div>
             <div style="font-size:0.95rem;margin-top:0.35rem;color:var(--muted);">{{ t.description }}</div>
             {% set msgs = ticket_messages.get(t.id, []) %}
